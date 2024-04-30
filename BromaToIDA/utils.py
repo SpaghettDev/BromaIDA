@@ -112,14 +112,14 @@ def register_btida(hotkey: str, f: Callable):
     try:
         hotkey_ctx  # type: ignore
         if del_hotkey(hotkey_ctx):  # type: ignore
-            print("Hotkey unregistered!")
+            print("[+] Hotkey unregistered!")
             del hotkey_ctx  # type: ignore
         else:
-            print("Failed to delete hotkey!")
+            print("[!] Failed to delete hotkey!")
     except:
         hotkey_ctx = add_hotkey(hotkey, f)
         if hotkey_ctx is None:
-            print("Failed to register hotkey!")
+            print("[!] Failed to register hotkey!")
             del hotkey_ctx
         else:
-            print("Hotkey registered!")
+            print("[+] Hotkey registered!")

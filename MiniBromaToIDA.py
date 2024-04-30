@@ -197,17 +197,17 @@ def register_btida(hotkey: str, f: Callable):
     try:
         hotkey_ctx  # type: ignore
         if del_hotkey(hotkey_ctx):  # type: ignore
-            print("Hotkey unregistered!")
+            print("[+] Hotkey unregistered!")
             del hotkey_ctx  # type: ignore
         else:
-            print("Failed to delete hotkey!")
+            print("[!] Failed to delete hotkey!")
     except:
         hotkey_ctx = add_hotkey(hotkey, f)
         if hotkey_ctx is None:
-            print("Failed to register hotkey!")
+            print("[!] Failed to register hotkey!")
             del hotkey_ctx
         else:
-            print("Hotkey registered!")
+            print("[+] Hotkey registered!")
 
 
 RX_CLASS = r"""class (\S+)( : (.*))? \{"""
@@ -433,7 +433,10 @@ def main():
                     set_func_cmt(ida_addr, f"Merged with: {func_names}", True)
 
         print("[+] Finished importing bindings from broma file")
-        popup("Ok", "Ok", None, "Finished importing Windows bindings from broma file.")
+        popup(
+            "Ok", "Ok", None,
+            "Finished importing Windows bindings from broma file."
+        )
 
 
 register_btida("Ctrl-Shift-I", main)
