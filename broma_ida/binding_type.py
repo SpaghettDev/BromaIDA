@@ -1,7 +1,6 @@
 from typing import Union, TypedDict, Literal, cast
 
 
-# legacy type
 class BaseBindingType(TypedDict):
     """Base binding type"""
     name: str
@@ -13,7 +12,7 @@ class BaseBindingType(TypedDict):
 
 
 class BaseShortBindingType(TypedDict):
-    """Base binding type 2"""
+    """Base binding type (but shorter)"""
     name: str
     className: str
     inheritedClasses: list[str]
@@ -23,7 +22,10 @@ class BaseShortBindingType(TypedDict):
 class Binding:
     """Actual binding type. Implements __eq__ because
     TypedDict can't be instantiated, and as such, can't
-    have overloaded methods"""
+    have overridden methods
+    TODO: figure out a way to narrow down the return type of __getitem__
+    to stop putting type: ignore everywhere
+    """
     binding: BaseBindingType
 
     def __init__(
@@ -72,3 +74,10 @@ class Binding:
             f"""idaQualifiedName="{self.binding["idaQualifiedName"]}" """ \
             f"""inheritedClasses="{self.binding["inheritedClasses"]}" """ \
             f"""address="{self.binding["address"]}\""""
+
+    def __hash__(self) -> int:
+        return hash((
+            self.binding["name"], self.binding["className"],
+            self.binding["qualifiedName"], self.binding["idaQualifiedName"],
+            self.binding["address"]
+        ))
