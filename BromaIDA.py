@@ -2,7 +2,7 @@ VERSION = "2.0.0"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"
-PLUGIN_HOTKEY = "Ctrl+Shift+I"
+PLUGIN_HOTKEY = "Ctrl+Shift+B"
 
 import idaapi
 import ida_kernwin
