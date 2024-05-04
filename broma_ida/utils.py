@@ -9,8 +9,23 @@ from ida_kernwin import ask_buttons, ask_str, ASKBTN_BTN1
 from ida_name import get_name_ea
 from idc import set_name
 
-from broma_ida.binding_type import Binding
+from re import sub
+
+from broma_ida.pybroma import Type
+
 from broma_ida.broma.constants import BROMA_PLATFORMS
+from broma_ida.broma.binding import Binding
+
+
+CPP_TYPE_SPECIFIERS = ("unsigned", "signed")
+CPP_TYPE_QUALIFIERS = ("const", "volatile")
+CPP_DATA_TYPES = ("bool", "char", "short", "int", "long")
+CPP_PRIMITIVES = (
+    "void", "int", "char", "float", "short",
+    "double", "bool", "long"
+)
+
+g_platform: BROMA_PLATFORMS = ""  # type: ignore
 
 
 def stop(reason: Union[str, None] = None) -> NoReturn:
@@ -32,9 +47,9 @@ def popup(
 
     Args:
         button1 (str): Button 1 text
-        button2 (str): Button 2 text
-        button3 (str): Button 3 text
-        text (str): The text to put int the popup
+        button2 (str): Button 2 text. None will hide the button inshallah.
+        button3 (str): Button 3 text. None hides the button.
+        text (str): The text to put.
         default (int, optional): Default option. Defaults to 1.
     """
     return ask_buttons(
@@ -74,7 +89,7 @@ def rename_func(addr: int, name: str, max: int = 10) -> bool:
                 f"{name} is already taken at "
                 f"{hex(ida_prev_addr - get_imagebase())} while trying to "
                 f"rename {hex(addr)}\n"
-                f"Overwrite or keep current name?\n"
+                "Overwrite or keep current name?\n"
                 "(Old location will be renamed to "
                 f"sub_{hex(ida_prev_addr)[2:].upper()})"
             ) == ASKBTN_BTN1:
@@ -104,9 +119,10 @@ def get_short_info(binding: Binding) -> str:
 def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
     """Tries to get the binary's platform
     Returns:
-        BROMA_PLATFORMS | None: The platform or None if
+        BROMA_PLATFORMS | NoReturn: The platform or stop() called if
             not able to be determined
     """
+    global g_platform
     structure_info = get_inf_structure()
 
     if structure_info.filetype == f_PE:
@@ -120,9 +136,11 @@ def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
         elif file_type_name.endswith("X86_64"):
             return "mac"
 
-    platform = ask_str(
-        "win", 256, "Enter a platform (win, mac or ios)"
-    )
+    if g_platform == "":
+        platform = ask_str(
+            "win", 256, "Enter a platform (win, mac or ios)"
+        )
+        g_platform = platform
 
     if platform not in get_args(BROMA_PLATFORMS):
         popup(
@@ -150,3 +168,48 @@ def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
     }
 
     return platform_to_printable[platform]
+
+
+def are_args_primitive(arguments: dict[str, Type]) -> bool:
+    """Checks if the arguments are all primitives because
+    importing structs isn't supported yet
+    TODO: start importing structs :D
+
+    Args:
+        arguments (dict[str, Type]):
+            FunctionBindField.MemberFunctionProto::args
+
+    Returns:
+        bool: ya
+    """
+    is_pointer_or_reference = \
+        lambda p: p[-1] == "*" or p[-1] == "&"  # noqa: E731
+    remove_pointer_or_reference = \
+        lambda p: p[:-1] if is_pointer_or_reference(p) else p  # noqa: E731
+
+    if len(arguments) == 0:
+        return True
+
+    arguments_str = {
+        name: arg_type.name for name, arg_type in arguments.items()
+    }
+
+    for name, arg_type in arguments_str.items():
+        arguments_str[name] = sub(
+            rf"""(?: )?unsigned(?!{
+                "|".join([f" {x}" for x in CPP_DATA_TYPES])
+            })""",
+            "unsigned int",
+            arg_type
+        )
+
+        for qualifier in CPP_TYPE_QUALIFIERS:
+            arguments_str[name] = sub(
+                rf"(?: )?{qualifier}(?: )?",
+                "",
+                arguments_str[name]
+            )
+
+        arguments_str[name] = remove_pointer_or_reference(arguments_str[name])
+
+    return all([arg_type in CPP_PRIMITIVES for _, arg_type in arguments_str.items()])

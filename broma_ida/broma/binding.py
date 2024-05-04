@@ -1,5 +1,7 @@
 from typing import Union, TypedDict, Literal, cast
 
+from broma_ida.pybroma import Type
+
 
 class BaseBindingType(TypedDict):
     """Base binding type"""
@@ -7,16 +9,23 @@ class BaseBindingType(TypedDict):
     className: str
     qualifiedName: str
     idaQualifiedName: str
-    inheritedClasses: list[str]
     address: int
+
+    return_type: Type
+    parameters: dict[str, Type]
 
 
 class BaseShortBindingType(TypedDict):
     """Base binding type (but shorter)"""
     name: str
     className: str
-    inheritedClasses: list[str]
     address: int
+
+
+class BaseShortBindingTypeWithMD(BaseShortBindingType):
+    """Base binding type (shorter, with metadata about the function)"""
+    return_type: Type
+    parameters: dict[str, Type]
 
 
 class Binding:
@@ -27,15 +36,22 @@ class Binding:
     to stop putting type: ignore everywhere
     """
     binding: BaseBindingType
+    is_overload: bool
 
     def __init__(
         self,
-        binding: Union[BaseShortBindingType, BaseBindingType]
+        binding: Union[
+            BaseShortBindingType, BaseShortBindingTypeWithMD, BaseBindingType
+        ],
+        is_overload: bool = False
     ) -> None:
-        if binding.get("qualifiedName"):
+        if binding.get("qualifiedName") is not None:
             self.binding = cast(BaseBindingType, binding)
         else:
             binding = cast(BaseShortBindingType, binding)
+
+            if binding.get("return_type"):
+                binding = cast(BaseShortBindingTypeWithMD, binding)
 
             self.binding = BaseBindingType({
                 "name": binding["name"],
@@ -46,9 +62,12 @@ class Binding:
                     f"""{binding["className"]}::{binding["name"]}""".replace(
                         "::~", "::d"
                     ),
-                "inheritedClasses": binding["inheritedClasses"],
-                "address": binding["address"]
+                "address": binding["address"],
+                "return_type": binding.get("return_type") or Type(),
+                "parameters": binding.get("parameters") or {}
             })
+
+        self.is_overload = is_overload
 
     def __eq__(self, key: object) -> bool:
         if isinstance(key, int):
@@ -62,18 +81,22 @@ class Binding:
         self,
         key: Literal[
             "name", "className", "qualifiedName",
-            "idaQualifiedName", "inheritedClasses", "address"
+            "idaQualifiedName", "address", "return_type",
+            "parameters"
         ]
-    ) -> Union[str, list[str], int]:
+    ) -> Union[str, list[str], int, bool]:
         return self.binding.__getitem__(key)  # type: ignore
 
     def __str__(self) -> str:
-        return f"""name="{self.binding["name"]}" """ \
-            f"""className="{self.binding["className"]}" """ \
-            f"""qualifiedName="{self.binding["qualifiedName"]}" """ \
-            f"""idaQualifiedName="{self.binding["idaQualifiedName"]}" """ \
-            f"""inheritedClasses="{self.binding["inheritedClasses"]}" """ \
-            f"""address="{self.binding["address"]}\""""
+        return f"""name={self.binding["name"]}""" \
+            f"""className={self.binding["className"]}""" \
+            f"""qualifiedName={self.binding["qualifiedName"]}""" \
+            f"""idaQualifiedName={self.binding["idaQualifiedName"]}""" \
+            f"""address={hex(self.binding["address"])} """ \
+            f"""is_overload={self.is_overload} """ \
+            f"""{self.binding["return_type"]}({
+                ', '.join(self.binding["parameters"])
+            })"""
 
     def __hash__(self) -> int:
         return hash((

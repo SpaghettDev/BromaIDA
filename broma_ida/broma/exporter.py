@@ -1,20 +1,33 @@
-from typing import cast, Union
+from typing import cast, Union, Generator, Any
 from os import path
 
-from re import match, sub, Match
+from idaapi import get_imagebase
+
+from re import search, match, sub, Match
 from shutil import move
 
 from broma_ida.broma.constants import BROMA_PLATFORMS
-from broma_ida.binding_type import Binding
+from broma_ida.broma.binding import Binding
 from broma_ida.utils import popup
 
 
 class BromaExporter:
     """Broma exporter of all time using regex (if you couldn't already tell)"""
+
+    """
+    group 1: class name
+    """
     RX_CLASS = r"""class (\S+)"""
-    # TODO: also matches "... = mac 0x55; // mac 0x55"
+
+    """
+    group 1: "virtual", "callback", "static", or empty
+    group 2: return type
+    group 3: function name
+    group 4: comma-separated parameters  or empty
+    group 5: comma-separated platform address(es)
+    """
     RX_METHOD = \
-        r"""^(?:\t| {4})(virtual|)(.* )?(\S+)\((.*)\)(?: const|)(?: = ((?:(?:win|mac|ios) (?:0[xX][0-9a-fA-F]+)(?:, )?)+))?;"""
+        r"""^(?:\t| {4})(?:\/\/ )?(virtual|callback|static|)(?: )?(?:(.*) )?(\S+)\((.*)\)(?: const|)(?: = ((?:(?:win|mac|ios) (?:0[xX][0-9a-fA-F]+)(?:, )?)+))?;"""  # noqa: E501
     RX_METHOD_PLAT_ADDR_BASE = r"""{platform} (0[xX][0-9a-fA-F]+)"""
 
     _filepath: str = ""
@@ -72,11 +85,15 @@ class BromaExporter:
         Returns:
             str: The Broma line with the address added
         """
+        # function is inlined
+        if parsed_broma_line.string.endswith("{\n"):
+            return parsed_broma_line.string
+
         self.num_exports += 1
 
         # binding has no address associated to it
         if parsed_broma_line.string.endswith(");\n"):
-            # strip last two characters ";\n" then add the binding's address
+            # strip last two characters (";\n") then add the binding's address
             return f"""{
                 parsed_broma_line.string[:-2]
             } = {
@@ -89,11 +106,12 @@ class BromaExporter:
 
         # binding has another platform's address associated to it
         if self._target_platform not in broma_binding_platforms:
-            return f"""{
-                parsed_broma_line.string[:-2]
-            }, {
-                self._target_platform
-            } {hex(binding["address"])};\n"""  # type: ignore
+            print(f"exported {binding['qualifiedName']}")
+            return sub(
+                r"(?:(0[xX][0-9a-fA-F]+);)",
+                rf"""\1, {self._target_platform} {hex(binding["address"])};""",  # type: ignore
+                parsed_broma_line.string, 1
+            )
 
         # binding has this platform's address associated to it
         if broma_binding_platforms[self._target_platform] != \
@@ -119,6 +137,7 @@ class BromaExporter:
         return parsed_broma_line.string
 
     def __init__(self, platform: BROMA_PLATFORMS, file: str):
+        self._reset()
         self._target_platform = platform
         self._filepath = file
 
@@ -142,6 +161,32 @@ class BromaExporter:
             (binding["qualifiedName"], binding)  # type: ignore
             for binding in bindings
         ])
+
+    def import_from_idb(self, names: Generator[tuple[Any, Any], Any, None]):
+        """Imports bindings from an idautils.Names generator
+
+        Args:
+            names (Generator[tuple[Any, Any], Any, None]):
+                The idautils.Names generator
+        """
+        for ea, name in names:
+            if "::" not in name:
+                continue
+
+            split_name = name.split("::")
+
+            # ["GJUINode", "dGJUINode"] -> "GJUINode" == "GJUINode"
+            if split_name[0] == split_name[1][1:]:
+                split_name = [
+                    split_name[0],
+                    split_name[1].replace("::d", "::~")
+                ]
+
+            self.push_binding(Binding({
+                "name": split_name[1],
+                "className": split_name[0],
+                "address": ea - get_imagebase()
+            }, search(r"\S+::\S+_[0-9]+$", name) is not None))
 
     def export(self):
         """Exports the bindings to the file
@@ -191,7 +236,7 @@ class BromaExporter:
 
         move(f"{self._filepath}.tmp", self._filepath)
 
-    def reset(self):
+    def _reset(self):
         """Resets a BromaExporter instance"""
         self._filepath = ""
         self._target_platform = ""  # type: ignore

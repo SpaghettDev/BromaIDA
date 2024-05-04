@@ -1,10 +1,10 @@
 # BromaIDA
 
-Broma IDA support (now real).
+IDA Broma support (now real).
 
-Parses a broma file and exports/imports the bindings into the current IDA project.
+Parses a Broma file and exports the bindings into a Broma file/imports the bindings into the current IDA project.
 
-[![Broma-To-IDA](assets/btida.gif)](https://github.com/SpaghettDev/Broma-To-IDA/releases)
+[![BromaIDA](assets/bida.gif)](https://github.com/SpaghettDev/BromaIDA/releases)
 
 ## Requirements
 
@@ -20,4 +20,8 @@ Parses a broma file and exports/imports the bindings into the current IDA projec
 
 1. `Ctrl-Shift-B` to start importing/exporting
 2. Browse and select the broma file (not tested with anything but `GeometryDash.bro`)
-3. Let the script handle the rest and enjoy free bindings
+3. Let the script handle the rest and enjoy free/exported bindings
+
+## Thanks
+
+Special thanks to [CallocGD](https://github.com/CallocGD)'s [PyBroma](https://github.com/CallocGD/PyBroma) which is used to import bindings from Broma.
