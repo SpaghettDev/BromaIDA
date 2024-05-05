@@ -17,7 +17,6 @@ def install_pybroma() -> int:
     try:
         si = STARTUPINFO()
         si.dwFlags |= STARTF_USESHOWWINDOW
-        #si.wShowWindow = subprocess.SW_HIDE # default
         ret = call([
             "python", "-m", "pip", "show", "pybroma"
         ], startupinfo=si, stdout=DEVNULL, stderr=STDOUT)
@@ -36,7 +35,6 @@ def install_pybroma() -> int:
 
             si = STARTUPINFO()
             si.dwFlags |= STARTF_USESHOWWINDOW
-            #si.wShowWindow = subprocess.SW_HIDE # default
             ret = call([
                 "python", "-m", "pip", "install",
                 "https://github.com/CallocGD/PyBroma/archive/refs/heads/main.zip"

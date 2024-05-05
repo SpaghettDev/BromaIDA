@@ -1,4 +1,4 @@
-VERSION = "3.0.0"
+VERSION = "3.1.0"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"
@@ -17,8 +17,7 @@ from broma_ida.pybroma_installer import install_pybroma
 install_pybroma()
 
 from broma_ida.utils import (
-    popup, stop,
-    get_platform, get_platform_printable
+    popup, stop, get_platform, get_platform_printable
 )
 from broma_ida.broma.importer import BromaImporter
 from broma_ida.broma.exporter import BromaExporter
