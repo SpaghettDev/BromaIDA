@@ -92,6 +92,7 @@ class BromaExporter:
         self.num_exports += 1
 
         # binding has no address associated to it
+        # TODO: this doesn't add binding to `...); // = idfk`
         if parsed_broma_line.string.endswith(");\n"):
             # strip last two characters (";\n") then add the binding's address
             return f"""{
@@ -106,7 +107,6 @@ class BromaExporter:
 
         # binding has another platform's address associated to it
         if self._target_platform not in broma_binding_platforms:
-            print(f"exported {binding['qualifiedName']}")
             return sub(
                 r"(?:(0[xX][0-9a-fA-F]+);)",
                 rf"""\1, {self._target_platform} {hex(binding["address"])};""",  # type: ignore

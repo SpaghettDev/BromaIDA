@@ -11,7 +11,7 @@ from ida_kernwin import ASKBTN_BTN1, ASKBTN_CANCEL
 
 from re import sub
 
-from broma_ida.pybroma import Root
+from pybroma import Root
 
 from broma_ida.broma.constants import BROMA_PLATFORMS
 from broma_ida.broma.binding import Binding

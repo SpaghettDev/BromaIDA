@@ -13,7 +13,13 @@ from idaapi import (
 from ida_kernwin import ask_file, ASKBTN_BTN1, ASKBTN_BTN2
 from idautils import Names
 
-from broma_ida.utils import popup, stop, get_platform, get_platform_printable
+from broma_ida.pybroma_installer import install_pybroma
+install_pybroma()
+
+from broma_ida.utils import (
+    popup, stop,
+    get_platform, get_platform_printable
+)
 from broma_ida.broma.importer import BromaImporter
 from broma_ida.broma.exporter import BromaExporter
 from broma_ida.ida_ctx_entry import IDACtxEntry
@@ -30,7 +36,7 @@ def bida_main():
         filePath = ask_file(False, "GeometryDash.bro", "bro")
 
         if filePath is None or (filePath and not filePath.endswith(".bro")):
-            popup("Ok", None, None, "Please select a valid file!")
+            popup("Ok", "Ok", None, "Please select a valid file!")
             stop()
 
         platform = get_platform()
@@ -45,7 +51,7 @@ def bida_main():
 
         broma_importer.import_into_idb()
 
-        print("[+] Finished importing bindings from Broma file")
+        print("[+] BromaIDA: Finished importing bindings from Broma file")
         popup(
             "Ok", "Ok", None,
             "Finished importing "
@@ -70,7 +76,10 @@ def bida_main():
         broma_exporter.import_from_idb(Names())
         broma_exporter.export()
 
-        print(f"[+] Finished exporting {broma_exporter.num_exports} bindings.")
+        print(
+            "[+] BromaIDA: Finished exporting "
+            f"{broma_exporter.num_exports} bindings."
+        )
         popup("Ok", "Ok", None, "Finished exporting bindings to Broma file.")
 
 
@@ -88,6 +97,14 @@ class BromaIDAPlugin(ida_plugin_t):
     def init(self):
         """Ran on plugin load"""
         self._register_action()
+
+        if install_pybroma() != 0:
+            popup(
+                "Ok", "Ok", None,
+                "Couldn't install PyBroma! "
+                "Please open a GitHub issue to resolve this."
+            )
+            stop()
 
         ida_msg(f"{self.wanted_name} v{VERSION} initialized\n")
 

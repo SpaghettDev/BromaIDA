@@ -11,7 +11,7 @@ from idc import set_name
 
 from re import sub
 
-from broma_ida.pybroma import Type
+from pybroma import Type
 
 from broma_ida.broma.constants import BROMA_PLATFORMS
 from broma_ida.broma.binding import Binding

@@ -1,6 +1,6 @@
 from typing import Union, TypedDict, Literal, cast
 
-from broma_ida.pybroma import Type
+from pybroma import Type
 
 
 class BaseBindingType(TypedDict):
