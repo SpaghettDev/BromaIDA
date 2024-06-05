@@ -1,5 +1,7 @@
 # BromaIDA
 
+# Deprecated, and will no longer be updated! Use master branch instead
+
 IDA Broma support (now real).
 
 Parses a Broma file and exports the bindings into a Broma file/imports the bindings into the current IDA project.
