@@ -28,7 +28,8 @@ def bida_main():
     """BromaIDA main entrypoint"""
     import_export_prompt = popup(
         "Import", "Export", "",
-        "Import or Export Broma file?"
+        "Import or Export Broma file?\n"
+        "(Please make sure Extras.bro is in the same directory)"
     )
 
     if import_export_prompt == ASKBTN_BTN1:
@@ -86,7 +87,7 @@ class BromaIDAPlugin(ida_plugin_t):
     """BromaIDA Plugin"""
     flags = PLUGIN_PROC | PLUGIN_HIDE
     comment = "Broma support for IDA."
-    help = "Ctrl-Shift-I to start the importing/exporting."
+    help = f"{PLUGIN_HOTKEY} to start the importing/exporting."
     wanted_name = PLUGIN_NAME
     wanted_hotkey = PLUGIN_HOTKEY
 

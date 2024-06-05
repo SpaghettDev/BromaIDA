@@ -10,6 +10,13 @@ Parses a Broma file and exports the bindings into a Broma file/imports the bindi
 
 - IDA 7.0 or higher
 - IDAPython Python v3.0.0 support
+- If you want to be able to import types:
+  - IDAClang
+  - MSVC
+
+## Features
+
+TODO
 
 ## Installation
 

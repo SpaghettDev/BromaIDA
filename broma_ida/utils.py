@@ -1,4 +1,4 @@
-from typing import get_args, NoReturn, Union
+from typing import get_args, Union, NoReturn, Optional
 
 from idaapi import (
     get_imagebase, get_inf_structure, get_file_type_name,
@@ -9,34 +9,31 @@ from ida_kernwin import ask_buttons, ask_str, ASKBTN_BTN1
 from ida_name import get_name_ea
 from idc import set_name
 
+from sys import path as sys_path
+from os import path as os_path
 from re import sub
+from pathlib import Path
 
-from pybroma import Type
-
-from broma_ida.broma.constants import BROMA_PLATFORMS
-from broma_ida.broma.binding import Binding
-
-
-CPP_TYPE_SPECIFIERS = ("unsigned", "signed")
-CPP_TYPE_QUALIFIERS = ("const", "volatile")
-CPP_DATA_TYPES = ("bool", "char", "short", "int", "long")
-CPP_PRIMITIVES = (
-    "void", "int", "char", "float", "short",
-    "double", "bool", "long"
+from broma_ida.broma.constants import (
+    BROMA_PLATFORMS, CPP_TYPE_QUALIFIERS, CPP_DATA_TYPES,
+    CPP_PRIMITIVES
 )
+from broma_ida.broma.binding import Binding
+from broma_ida.broma.argtype import ArgType
 
-g_platform: BROMA_PLATFORMS = ""  # type: ignore
+
+g_platform: Optional[BROMA_PLATFORMS] = None
 
 
-def stop(reason: Union[str, None] = None) -> NoReturn:
+def stop(reason: Optional[str] = None) -> NoReturn:
     """Nuh Uh"""
     raise Exception() if reason is None else Exception(reason)
 
 
 def popup(
     button1: str,
-    button2: Union[str, None],
-    button3: Union[str, None],
+    button2: Optional[str],
+    button3: Optional[str],
     text: str,
     default: int = 1
 ) -> int:
@@ -111,9 +108,7 @@ def get_short_info(binding: Binding) -> str:
     Returns:
         str: In the format of "[binding name] @ [binding address]"
     """
-    return f"""{
-        binding["qualifiedName"]
-    } @ {hex(binding["address"])}"""  # type: ignore
+    return f"""{binding["qualified_name"]} @ {hex(binding["address"])}"""
 
 
 def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
@@ -123,17 +118,23 @@ def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
             not able to be determined
     """
     global g_platform
+    if g_platform is not None:
+        return g_platform
+
     structure_info = get_inf_structure()
 
     if structure_info.filetype == f_PE:
+        g_platform = "win"
         return "win"
 
     if structure_info.filetype == f_MACHO:
         file_type_name = get_file_type_name()
 
         if file_type_name.endswith("ARM64"):
+            g_platform = "ios"
             return "ios"
         elif file_type_name.endswith("X86_64"):
+            g_platform = "mac"
             return "mac"
 
     if g_platform == "":
@@ -145,7 +146,9 @@ def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
     if platform not in get_args(BROMA_PLATFORMS):
         popup(
             "Ok", None, None,
-            f"""Invalid platform! ({platform} not "win", "mac" or "ios")"""
+            f"""Invalid platform! ("{platform}" not in ("{
+                get_args(BROMA_PLATFORMS)
+            }\"))"""
         )
         stop()
 
@@ -170,14 +173,13 @@ def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
     return platform_to_printable[platform]
 
 
-def are_args_primitive(arguments: dict[str, Type]) -> bool:
+def are_args_primitive(arguments: dict[str, ArgType]) -> bool:
     """Checks if the arguments are all primitives because
     importing structs isn't supported yet
     TODO: start importing structs :D
 
     Args:
-        arguments (dict[str, Type]):
-            FunctionBindField.MemberFunctionProto::args
+        arguments (dict[str, str])
 
     Returns:
         bool: ya
@@ -191,7 +193,7 @@ def are_args_primitive(arguments: dict[str, Type]) -> bool:
         return True
 
     arguments_str = {
-        name: arg_type.name for name, arg_type in arguments.items()
+        name: t["type"] for name, t in arguments.items()
     }
 
     for name, arg_type in arguments_str.items():
@@ -212,4 +214,34 @@ def are_args_primitive(arguments: dict[str, Type]) -> bool:
 
         arguments_str[name] = remove_pointer_or_reference(arguments_str[name])
 
-    return all([arg_type in CPP_PRIMITIVES for _, arg_type in arguments_str.items()])
+    return all([
+        arg_type in CPP_PRIMITIVES for _, arg_type in arguments_str.items()
+    ])
+
+
+def is_primitive_type(ret: str) -> bool:
+    """Is a type a C++ primitive
+
+    Args:
+        ret (str): ya
+
+    Returns:
+        bool: ya
+    """
+    return ret in CPP_PRIMITIVES
+
+
+def get_ida_plugin_path() -> Optional[Path]:
+    """_summary_
+
+    Returns:
+        str: _description_
+    """
+    paths = [path for path in sys_path if "plugins" in path]
+
+    if len(paths) != 1:
+        return None
+
+    return Path(
+        os_path.abspath(os_path.join(os_path.dirname(paths[0]), "plugins"))
+    )

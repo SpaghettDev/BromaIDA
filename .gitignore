@@ -1,3 +1,5 @@
 /.vscode
-/__pycache__
+/**/__pycache__
 /codegen.txt
+/jupyter
+/broma_ida/types/codegen.hpp

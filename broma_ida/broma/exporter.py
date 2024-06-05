@@ -1,4 +1,4 @@
-from typing import cast, Union, Generator, Any
+from typing import cast, Optional, Generator, Any
 from os import path
 
 from idaapi import get_imagebase
@@ -33,7 +33,7 @@ class BromaExporter:
     _filepath: str = ""
     _target_platform: BROMA_PLATFORMS
 
-    # { "qualifiedName": Binding }
+    # { "qualified_name": Binding }
     bindings: dict[str, Binding] = {}
     num_exports: int = 0
 
@@ -50,7 +50,7 @@ class BromaExporter:
 
     def _parse_method_platforms(
         self,
-        platforms: Union[str, None]
+        platforms: Optional[str]
     ) -> dict[BROMA_PLATFORMS, int]:
         """Parses "win 0x13be40, mac 0x586990" to
         { "win": 0x13be40, "mac": 0x586990 }
@@ -99,7 +99,7 @@ class BromaExporter:
                 parsed_broma_line.string[:-2]
             } = {
                 self._target_platform
-            } {hex(binding["address"])};\n"""  # type: ignore
+            } {hex(binding["address"])};\n"""
 
         broma_binding_platforms = self._parse_method_platforms(
             parsed_broma_line.group(5)
@@ -109,7 +109,7 @@ class BromaExporter:
         if self._target_platform not in broma_binding_platforms:
             return sub(
                 r"(?:(0[xX][0-9a-fA-F]+);)",
-                rf"""\1, {self._target_platform} {hex(binding["address"])};""",  # type: ignore
+                rf"""\1, {self._target_platform} {hex(binding["address"])};""",
                 parsed_broma_line.string, 1
             )
 
@@ -119,17 +119,17 @@ class BromaExporter:
             if popup(
                 "Overwrite", "Keep", None,
                 "Mismatch in Broma for method "
-                f"""{binding["qualifiedName"]} """  # type: ignore
+                f"""{binding["qualified_name"]} """
                 f"""(Broma: {
                     hex(broma_binding_platforms[self._target_platform])
                 }. """
-                f"""idb: {hex(binding["address"])})\n"""  # type: ignore
+                f"""idb: {hex(binding["address"])})\n"""
                 "Overwrite Broma or Keep?"
             ) == 1:
                 return sub(
                     self._make_plat_method_addr_regex(self._target_platform),
                     f"{self._target_platform} "
-                    f"""{hex(binding["address"])}""",  # type: ignore
+                    f"""{hex(binding["address"])}""",
                     parsed_broma_line.string
                 )
 
@@ -148,7 +148,7 @@ class BromaExporter:
             binding (Binding): The binding to be exported
         """
         self.bindings.update([
-            (binding["qualifiedName"], binding)  # type: ignore
+            (binding["qualified_name"], binding)
         ])
 
     def push_bindings(self, bindings: list[Binding]):
@@ -158,7 +158,7 @@ class BromaExporter:
             bindings (list[Binding]): The list of bindings
         """
         self.bindings.update([
-            (binding["qualifiedName"], binding)  # type: ignore
+            (binding["qualified_name"], binding)
             for binding in bindings
         ])
 
@@ -184,7 +184,7 @@ class BromaExporter:
 
             self.push_binding(Binding({
                 "name": split_name[1],
-                "className": split_name[0],
+                "class_name": split_name[0],
                 "address": ea - get_imagebase()
             }, search(r"\S+::\S+_[0-9]+$", name) is not None))
 
