@@ -2,7 +2,6 @@ from typing import cast, overload, Union, TypedDict, Literal
 
 from ida_name import is_visible_cp
 
-from broma_ida.broma.constants import BROMA_CALLING_CONVENTIONS
 from broma_ida.broma.argtype import ArgType, RetType
 
 
@@ -16,7 +15,6 @@ class BaseBindingType(TypedDict):
 
     return_type: RetType
     parameters: list[ArgType]
-    calling_convention: BROMA_CALLING_CONVENTIONS
     is_virtual: bool
     is_static: bool
 
@@ -32,7 +30,6 @@ class BaseShortBindingTypeWithMD(BaseShortBindingType):
     """Base binding type (shorter, with metadata about the function)"""
     return_type: RetType
     parameters: list[ArgType]
-    calling_convention: BROMA_CALLING_CONVENTIONS
     is_virtual: bool
     is_static: bool
 
@@ -93,8 +90,6 @@ class Binding:
                     "name": "", "type": "", "reg": ""
                 }),
                 "parameters": binding.get("parameters") or [],
-                "calling_convention":
-                    binding.get("calling_convention") or "default",
                 "is_virtual": binding.get("is_virtual") or False,
                 "is_static": binding.get("is_static") or False
             })
@@ -138,13 +133,6 @@ class Binding:
     def __getitem__(self, key: Literal["return_type"]) -> RetType:
         ...
 
-    @overload
-    def __getitem__(
-        self,
-        key: Literal["calling_convention"]
-    ) -> BROMA_CALLING_CONVENTIONS:
-        ...
-
     def __getitem__(self, key):
         return self.binding.__getitem__(key)
 
@@ -155,7 +143,6 @@ class Binding:
         return f"""{"virtual " if self.binding["is_virtual"] else ""}""" \
             f"""{"static " if self.binding["is_static"] else ""}""" \
             f"""{self.binding["return_type"]["type"]} """ \
-            f"""__{self.binding["calling_convention"]} """ \
             f"""{self.binding["class_name"]}::{self.binding["name"]}""" \
             f"""({", ".join([
                 str(arg) for arg in self.binding["parameters"]

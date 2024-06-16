@@ -425,6 +425,97 @@ namespace cocos2d
 
 namespace cocos2d
 {
+	// not in cocos2d, blame geode
+	// 2.2 additions
+	struct ParticleStruct
+	{
+		int TotalParticles;
+		float Duration;
+		float Life;
+		float LifeVar;
+		int EmissionRate;
+		int Angle;
+		int AngleVar;
+		int Speed;
+		int SpeedVar;
+		int PosVarX;
+		int PosVarY;
+		int GravityX;
+		int GravityY;
+		int RadialAccel;
+		int RadialAccelVar;
+		int TangentialAccel;
+		int TangentialAccelVar;
+
+		int StartSize;
+		int StartSizeVar;
+		int StartSpin;
+		int StartSpinVar;
+		float StartColorR;
+		float StartColorVarR;
+		float StartColorG;
+		float StartColorVarG;
+		float StartColorB;
+		float StartColorVarB;
+		float StartColorA;
+		float StartColorVarA;
+
+		int EndSize;
+		int EndSizeVar;
+		int EndSpin;
+		int EndSpinVar;
+		float EndColorR;
+		float EndColorVarR;
+		float EndColorG;
+		float EndColorVarG;
+		float EndColorB;
+		float EndColorVarB;
+		float EndColorA;
+		float EndColorVarA;
+
+		float FadeInTime;
+		float FadeInTimeVar;
+		float FadeOutTime;
+		float FadeOutTimeVar;
+
+		int StartRadius;
+		int StartRadiusVar;
+		int EndRadius;
+		int EndRadiusVar;
+		int RotatePerSecond;
+		int RotatePerSecondVar;
+
+		int EmitterMode;
+		int PositionType;
+		bool isBlendAdditive;
+		bool startSpinEqualToEndSpin;
+		bool rotationIsDir;
+		bool dynamicRotationIsDir;
+		int customParticleIdx;
+		bool uniformColorMode;
+
+		float frictionPos;
+		float frictionPosVar;
+
+		float respawn;
+		float respawnVar;
+
+		bool orderSensitive;
+		bool startSizeEqualToEndSize;
+		bool startRadiusEqualToEndRadius;
+
+		bool startRGBVarSync;
+		bool endRGBVarSync;
+
+		float frictionSize;
+		float frictionSizeVar;
+
+		float frictionRot;
+		float frictionRotVar;
+
+		std::string sFrame;
+	};
+
 	// enums
 	enum class CCObjectType {
 		PlayLayer = 5,
@@ -998,6 +1089,37 @@ namespace cocos2d
 		ccTouchMax = 4,
 	};
 
+	enum ResolutionPolicy
+	{
+		// The entire application is visible in the specified area without trying to preserve the original aspect ratio.
+		// Distortion can occur, and the application may appear stretched or compressed.
+		kResolutionExactFit,
+		// The entire application fills the specified area, without distortion but possibly with some cropping,
+		// while maintaining the original aspect ratio of the application.
+		kResolutionNoBorder,
+		// The entire application is visible in the specified area without distortion while maintaining the original
+		// aspect ratio of the application. Borders can appear on two sides of the application.
+		kResolutionShowAll,
+		// The application takes the height of the design resolution size and modifies the width of the internal
+		// canvas so that it fits the aspect ratio of the device
+		// no distortion will occur however you must make sure your application works on different
+		// aspect ratios
+		kResolutionFixedHeight,
+		// The application takes the width of the design resolution size and modifies the height of the internal
+		// canvas so that it fits the aspect ratio of the device
+		// no distortion will occur however you must make sure your application works on different
+		// aspect ratios
+		kResolutionFixedWidth,
+
+		kResolutionUnKnown,
+	};
+
+	typedef enum {
+		// the back key clicked msg
+		kTypeBackClicked = 1,
+		kTypeMenuClicked,
+	} ccKeypadMSGType;
+
 
 	struct  cc_timeval
 	{
@@ -1054,16 +1176,33 @@ namespace cocos2d
 		float     duration;           // the soft keyboard animation duration
 	} CCIMEKeyboardNotificationInfo;
 
+	typedef struct GLFWvidmode
+	{
+		/*! The width, in screen coordinates, of the video mode.
+		*/
+		int width;
+		/*! The height, in screen coordinates, of the video mode.
+		*/
+		int height;
+		/*! The bit depth of the red channel of the video mode.
+		*/
+		int redBits;
+		/*! The bit depth of the green channel of the video mode.
+		*/
+		int greenBits;
+		/*! The bit depth of the blue channel of the video mode.
+		*/
+		int blueBits;
+		/*! The refresh rate, in Hz, of the video mode.
+		*/
+		int refreshRate;
+	} GLFWvidmode;
+
 	struct ccTouchHandlerHelperData {
 		// we only use the type
 	//    void (StandardTouchDelegate::*touchesSel)(CCSet*, CCEvent*);
 	//    void (TargetedTouchDelegate::*touchSel)(NSTouch*, CCEvent*);
 		int  m_type;
-	};
-
-	// 2.2 additions
-	struct ParticleStruct {
-
 	};
 
 
@@ -1094,6 +1233,9 @@ namespace cocos2d
 	typedef void (CCObject::*SEL_MenuHandler)(CCObject*);
 	typedef void (CCObject::*SEL_EventHandler)(CCEvent*);
 	typedef int (CCObject::*SEL_Compare)(CCObject*);
+
+	typedef long long (*CUSTOM_WND_PROC)(unsigned int message, unsigned long long wParam, long long lParam, int* pProcessed);
+
 
 	class CCCopying
 	{
@@ -4236,6 +4378,808 @@ namespace cocos2d
 	};
 
 
+	// CCTouchDispatcher
+	class  CCTouchHandler : public CCObject
+	{
+	public:
+		inline CCTouchHandler() = default;
+		virtual ~CCTouchHandler(void);
+
+		CCTouchDelegate* getDelegate();
+		void setDelegate(CCTouchDelegate *pDelegate);
+
+		int getPriority(void);
+		void setPriority(int nPriority);
+
+		int getEnabledSelectors(void);
+		void setEnalbedSelectors(int nValue);
+
+		virtual bool initWithDelegate(CCTouchDelegate *pDelegate, int nPriority);
+
+	public:
+		static CCTouchHandler* handlerWithDelegate(CCTouchDelegate *pDelegate, int nPriority);
+
+	public:
+		CCTouchDelegate *m_pDelegate;
+		int m_nPriority;
+		int m_nEnabledSelectors;
+	};
+
+	class EGLTouchDelegate
+	{
+	public:
+		virtual void touchesBegan(CCSet* touches, CCEvent* pEvent) = 0;
+		virtual void touchesMoved(CCSet* touches, CCEvent* pEvent) = 0;
+		virtual void touchesEnded(CCSet* touches, CCEvent* pEvent) = 0;
+		virtual void touchesCancelled(CCSet* touches, CCEvent* pEvent) = 0;
+		virtual ~EGLTouchDelegate() {}
+	};
+
+	class CCTouchDispatcher : public CCObject, public EGLTouchDelegate
+	{
+	public:
+		~CCTouchDispatcher();
+		bool init(void);
+		CCTouchDispatcher()
+			: m_pTargetedHandlers(NULL)
+			, m_pStandardHandlers(NULL)
+			, m_pHandlersToAdd(NULL)
+			, m_pHandlersToRemove(NULL)
+		{}
+
+	public:
+		bool isDispatchEvents(void);
+		void setDispatchEvents(bool bDispatchEvents);
+
+		void addStandardDelegate(CCTouchDelegate *pDelegate, int nPriority);
+
+		void addTargetedDelegate(CCTouchDelegate *pDelegate, int nPriority, bool bSwallowsTouches);
+
+		void removeDelegate(CCTouchDelegate *pDelegate);
+
+		void removeAllDelegates(void);
+
+		void setPriority(int nPriority, CCTouchDelegate *pDelegate);
+		void touches(CCSet *pTouches, CCEvent *pEvent, unsigned int uIndex);
+		virtual void touchesBegan(CCSet* touches, CCEvent* pEvent);
+		virtual void touchesMoved(CCSet* touches, CCEvent* pEvent);
+		virtual void touchesEnded(CCSet* touches, CCEvent* pEvent);
+		virtual void touchesCancelled(CCSet* touches, CCEvent* pEvent);
+
+	public:
+		CCTouchHandler* findHandler(CCTouchDelegate *pDelegate);
+
+		void addPrioTargetedDelegate(cocos2d::CCTouchDelegate*, int, bool);
+		bool isUsingForcePrio();
+		void registerForcePrio(cocos2d::CCObject*, int);
+		void unregisterForcePrio(cocos2d::CCObject*);
+
+	private:
+		RT_ADD(
+			void incrementForcePrio(int priority);
+			void decrementForcePrio(int priority);
+		)
+
+	protected:
+		void forceRemoveDelegate(CCTouchDelegate *pDelegate);
+		void forceAddHandler(CCTouchHandler *pHandler, CCArray* pArray);
+		void forceRemoveAllDelegates(void);
+		void rearrangeHandlers(CCArray* pArray);
+		CCTouchHandler* findHandler(CCArray* pArray, CCTouchDelegate *pDelegate);
+
+	public:
+		CCArray* m_pTargetedHandlers;
+		CCArray* m_pStandardHandlers;
+
+		bool m_bLocked;
+		bool m_bToAdd;
+		bool m_bToRemove;
+		CCArray* m_pHandlersToAdd;
+		struct _ccCArray *m_pHandlersToRemove;
+		bool m_bToQuit;
+		bool m_bDispatchEvents;
+
+		// 4, 1 for each type of event
+		struct ccTouchHandlerHelperData m_sHandlerHelperData[ccTouchMax];
+
+	protected:
+		// 2.2 changes
+
+		CC_SYNTHESIZE_NV(int, m_forcePrio, ForcePrio);
+		void* m_unknown;
+		CC_SYNTHESIZE_NV(int, m_targetPrio, TargetPrio);
+	};
+
+	// CCDirector
+	class TypeInfo
+	{
+	public:
+		virtual long getClassTypeInfo() = 0;
+	};
+
+	static inline unsigned int getHashCodeByString(const char *key)
+	{
+		unsigned int len = strlen(key);
+		const char *end=key+len;
+		unsigned int hash;
+
+		for (hash = 0; key < end; key++)
+		{
+			hash *= 16777619;
+			hash ^= (unsigned int) (unsigned char) toupper(*key);
+		}
+		return (hash);
+	}
+
+	class CCEGLViewProtocol
+	{
+	public:
+		CCEGLViewProtocol();
+		virtual ~CCEGLViewProtocol();
+
+		virtual void    end() {}
+		virtual bool    isOpenGLReady() { return false; }
+		virtual void    swapBuffers() {}
+		virtual void    setIMEKeyboardState(bool bOpen) {}
+		virtual const CCSize& getFrameSize() const;
+		virtual void setFrameSize(float width, float height);
+		virtual CCSize getVisibleSize() const;
+		virtual CCPoint getVisibleOrigin() const;
+		virtual void setDesignResolutionSize(float width, float height, ResolutionPolicy resolutionPolicy);
+		virtual const CCSize&  getDesignResolutionSize() const;
+		virtual void setTouchDelegate(EGLTouchDelegate * pDelegate);
+		virtual void setViewPortInPoints(float x , float y , float w , float h);
+		virtual void setScissorInPoints(float x , float y , float w , float h);
+		virtual bool isScissorEnabled();
+		virtual CCRect getScissorRect();
+		virtual void setViewName(const char* pszViewName);
+		const char* getViewName();
+		virtual void handleTouchesBegin(int num, int ids[], float xs[], float ys[]);
+		virtual void handleTouchesMove(int num, int ids[], float xs[], float ys[]);
+		virtual void handleTouchesEnd(int num, int ids[], float xs[], float ys[]);
+		virtual void handleTouchesCancel(int num, int ids[], float xs[], float ys[]);
+		const CCRect& getViewPortRect() const;
+		float getScaleX() const;
+		float getScaleY() const;
+		virtual void pollInputEvents();
+		void updateDesignResolutionSize();
+
+	private:
+		void getSetOfTouchesEndOrCancel(CCSet& set, int num, int ids[], float xs[], float ys[]);
+
+	protected:
+		EGLTouchDelegate* m_pDelegate;
+
+		// real screen size
+		CCSize m_obScreenSize;
+		// resolution size, it is the size appropriate for the app resources.
+		CCSize m_obDesignResolutionSize;
+		// the view port size
+		CCRect m_obViewPortRect;
+		// the view name
+		char   m_szViewName[50];
+
+		float  m_fScaleX;
+		float  m_fScaleY;
+		ResolutionPolicy m_eResolutionPolicy;
+	};
+
+	class CCEGLView : public CCEGLViewProtocol RT_ADD(, public CCObject)
+	{
+	protected:
+		RT_ADD( virtual ~CCEGLView(); )
+	public:
+		CCEGLView();
+
+		RT_REMOVE(  virtual ~CCEGLView();   )
+
+		virtual bool isOpenGLReady();
+		virtual void end();
+		virtual void swapBuffers();
+		virtual void setFrameSize(float width, float height);
+		RT_REMOVE(  virtual void setEditorFrameSize(float width, float height,HWND hWnd);   )
+		virtual void setIMEKeyboardState(bool bOpen);
+		void updateWindow(int width, int height);
+		void pollEvents(void);
+
+		void setMenuResource(const wchar_t* menu);
+		void setWndProc(CUSTOM_WND_PROC proc);
+
+	protected:
+		RT_REMOVE(  virtual bool Create();  )
+		void setupWindow(cocos2d::CCRect rect);
+		RT_ADD(bool initGlew();)
+
+	public:
+		RT_REMOVE(bool initGL();)
+		RT_REMOVE(void destroyGL();)
+
+		RT_REMOVE(  virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam); )
+
+		void setHWnd(void* hWnd);
+		// win32 platform function
+		RT_REMOVE( void* getHWnd(); )
+		RT_REMOVE(  virtual void resize(int width, int height); )
+		RT_ADD(     void resizeWindow(int width, int height);   )
+
+		void setFrameZoomFactor(float fZoomFactor);
+		float getFrameZoomFactor();
+		RT_REMOVE(  virtual void centerWindow();    )
+		RT_ADD(     void centerWindow();            )
+		RT_ADD(     bool windowShouldClose();       )
+
+		RT_ADD(     void showCursor(bool state);    )
+			
+		typedef void (*LPFN_ACCELEROMETER_KEYHOOK)( unsigned int message, unsigned long long wParam, long long lParam );
+		void setAccelerometerKeyHook( LPFN_ACCELEROMETER_KEYHOOK lpfnAccelerometerKeyHook );
+
+		virtual void setViewPortInPoints(float x , float y , float w , float h);
+		virtual void setScissorInPoints(float x , float y , float w , float h);
+
+		static CCEGLView* sharedOpenGLView();
+
+		static CCEGLView* create(const std::string&);
+
+		static cocos2d::CCEGLView* createWithFullScreen(std::string const&, bool);
+		static cocos2d::CCEGLView* createWithFullScreen(std::string const&, bool, GLFWvidmode const&, void*);
+		static cocos2d::CCEGLView* createWithRect(std::string const&, cocos2d::CCRect, float);
+
+		void toggleFullScreen(bool fullscreen, bool borderless);
+
+		void* getWindow(void) const;
+
+		CCSize getDisplaySize();
+
+		void capture();
+		void checkErrorGL(char const*);
+
+		void enableRetina(bool);
+
+		bool getCursorLocked() const;
+		bool getGameplayActive() const;
+		bool getIsBorderless() const;
+		bool getIsFullscreen() const;
+		int getRetinaFactor() const;
+		bool getShouldHideCursor() const;
+		void iconify();
+
+		bool initWithFullScreen(std::string const&, bool);
+		bool initWithFullscreen(std::string const&, bool, GLFWvidmode const&, void*);
+		bool initWithRect(std::string const&, cocos2d::CCRect, float);
+
+		bool isRetinaEnabled() const;
+
+		void onGLFWWindowCloseFunCallback(void*);
+		void releaseCapture();
+		void showMessage(std::string);
+
+		void toggleGameplayActive(bool);
+		void toggleLockCursor(bool);
+		void updateDesignSize(int, int);
+		void updateFrameSize();
+
+	protected:
+		static CCEGLView* s_pEglView;
+		bool m_bCaptured;
+		RT_REMOVE(
+			HWND m_hWnd;
+			HDC  m_hDC;
+			HGLRC m_hRC;
+			LPFN_ACCELEROMETER_KEYHOOK m_lpfnAccelerometerKeyHook;
+		)
+		bool m_bSupportTouch;
+		RT_ADD(
+			bool m_bInRetinaMonitor;
+			bool m_bRetinaEnabled;
+			int m_nRetinaFactor;
+			bool m_bCursorHidden;
+		)
+		RT_REMOVE(
+			LPCWSTR m_menu;
+			CUSTOM_WND_PROC m_wndproc;
+		)
+		float m_fFrameZoomFactor;
+		RT_ADD(
+			void* m_pMainWindow;
+			void* m_pPrimaryMonitor;
+		)
+	public:
+		RT_ADD(
+			CC_SYNTHESIZE_NV(CCSize, m_obWindowedSize, WindowedSize);
+		)
+
+		RT_ADD(
+			float m_fMouseX;
+			float m_fMouseY;
+			bool m_bIsFullscreen;
+			bool m_bIsBorderless;
+			bool m_bShouldHideCursor;
+			bool m_bCursorLocked;
+			bool m_bShouldCallGLFinish;
+		)
+
+	protected:
+		RT_ADD(
+			void onGLFWCharCallback(void* window, unsigned int entered);
+			void onGLFWCursorEnterFunCallback(void* window, int entered);
+			void onGLFWDeviceChangeFunCallback(void* window);
+			void onGLFWError(int code, const char* description);
+			void onGLFWframebuffersize(void* window, int width, int height);
+			void onGLFWMouseMoveCallBack(void* window, double x, double y);
+			void onGLFWMouseCallBack(void* window, int button, int action, int mods);
+			void onGLFWKeyCallback(void* window, int key, int scancode, int action, int mods);
+			void onGLFWMouseScrollCallback(void* window, double xoffset, double yoffset);
+			void onGLFWWindowIconifyFunCallback(void* window, int iconified);
+			void onGLFWWindowPosCallback(void* window, int x, int y);
+			void onGLFWWindowSizeFunCallback(void* window, int width, int height);
+		)
+	};
+
+	class CCDirectorDelegate
+	{
+	public:
+		virtual void updateProjection(void) = 0;
+	};
+
+	class CCKeypadDispatcher : public CCObject
+	{
+	public:
+		CCKeypadDispatcher();
+		~CCKeypadDispatcher();
+
+		void addDelegate(CCKeypadDelegate* pDelegate);
+		void removeDelegate(CCKeypadDelegate* pDelegate);
+
+		void forceAddDelegate(CCKeypadDelegate* pDelegate);
+		void forceRemoveDelegate(CCKeypadDelegate* pDelegate);
+
+		bool dispatchKeypadMSG(ccKeypadMSGType nMsgType);
+
+	protected:
+		CCArray* m_pDelegates;
+		bool m_bLocked;
+		bool m_bToAdd;
+		bool m_bToRemove;
+
+		struct _ccCArray *m_pHandlersToAdd;
+		struct _ccCArray *m_pHandlersToRemove;
+	};
+
+	RT_ADD(
+	class CCKeyboardDispatcher : public CCObject 
+	{
+	public:
+		CCKeyboardDispatcher();
+		virtual ~CCKeyboardDispatcher();
+
+		void addDelegate(CCKeyboardDelegate* pDelegate);
+		void removeDelegate(CCKeyboardDelegate* pDelegate);
+
+		void forceAddDelegate(CCKeyboardDelegate* pDelegate);
+		void forceRemoveDelegate(CCKeyboardDelegate* pDelegate);
+
+		static enumKeyCodes convertKeyCode(enumKeyCodes key);
+
+		bool dispatchKeyboardMSG(enumKeyCodes key, bool isKeyDown, bool isKeyRepeat);
+
+		inline bool getAltKeyPressed() const {
+			return m_bAltPressed;
+		}
+		inline bool getCommandKeyPressed() const {
+			return m_bCommandPressed;
+		}
+		inline bool getControlKeyPressed() const {
+			return m_bControlPressed;
+		}
+		inline bool getShiftKeyPressed() const {
+			return m_bShiftPressed;
+		}
+
+		const char* keyToString(enumKeyCodes key);
+
+		void updateModifierKeys(bool shft, bool ctrl, bool alt, bool cmd);
+
+		inline bool getBlockRepeat() const {
+			return m_bBlockRepeat;
+		}
+
+		inline void setBlockRepeat(bool blockRepeat) {
+			this->m_bBlockRepeat = blockRepeat;
+		}
+
+	protected:
+		CCArray* m_pDelegates;	// 0x34
+		bool m_bUnknown38;			// 0x38
+		bool m_bUnknown39;      // 0x39
+		bool m_bUnknown3a;			// 0x3a
+		ccCArray* m_pUnknown3c; // 0x3c
+		ccCArray* m_pUnknown40;	// 0x40
+		bool m_bShiftPressed;		// 0x44
+		bool m_bControlPressed;	// 0x45
+		bool m_bAltPressed;			// 0x46
+		bool m_bCommandPressed;	// 0x47
+		bool m_bBlockRepeat;		// 0x48
+
+		// ~~there's more here, check the initializer~~ no there's not??
+	};
+
+	class CCMouseDispatcher : public CCObject 
+	{
+	public:
+		CCMouseDispatcher();
+		virtual ~CCMouseDispatcher();
+
+		void addDelegate(CCMouseDelegate* pDelegate);
+		void removeDelegate(CCMouseDelegate* pDelegate);
+
+		void forceAddDelegate(CCMouseDelegate* pDelegate);
+		void forceRemoveDelegate(CCMouseDelegate* pDelegate);
+
+		bool dispatchScrollMSG(float x, float y);
+
+	protected:
+		CCArray* m_pMouseHandlers;
+		bool m_bLocked;
+		bool m_bToAdd;
+		bool m_bToRemove;
+		ccCArray* m_pHandlersToAdd;
+		ccCArray* m_pHandlersToRemove;
+	};
+)
+
+	class CCAccelerometer
+	{
+	public:
+		CCAccelerometer();
+		~CCAccelerometer();
+
+		void setDelegate(CCAccelerometerDelegate* pDelegate);
+		void setAccelerometerInterval(float interval);
+		void update( double x,double y,double z,double timestamp );
+	private:
+		CCAcceleration m_obAccelerationValue;
+		CCAccelerometerDelegate* m_pAccelDelegate;
+	};
+
+	class CCTextureAtlas;
+	class CCAtlasNode : public CCNodeRGBA, public CCTextureProtocol
+	{
+	protected:
+		unsigned int m_uItemsPerRow;
+		unsigned int m_uItemsPerColumn;
+
+		unsigned int    m_uItemWidth;
+		unsigned int    m_uItemHeight;
+
+		ccColor3B    m_tColorUnmodified;
+
+		CC_PROPERTY(CCTextureAtlas*, m_pTextureAtlas, TextureAtlas);
+
+		bool m_bIsOpacityModifyRGB;
+
+		CC_PROPERTY(ccBlendFunc, m_tBlendFunc, BlendFunc);
+
+		CC_PROPERTY(unsigned int, m_uQuadsToDraw, QuadsToDraw);
+		GLint    m_nUniformColor;
+		bool m_bIgnoreContentScaleFactor;
+
+	public:
+		CCAtlasNode();
+		virtual ~CCAtlasNode();
+
+		static CCAtlasNode * create(const char* tile,unsigned int tileWidth, unsigned int tileHeight, 
+			unsigned int itemsToRender);
+
+		bool initWithTileFile(const char* tile, unsigned int tileWidth, unsigned int tileHeight, unsigned int itemsToRender);
+
+		bool initWithTexture(CCTexture2D* texture, unsigned int tileWidth, unsigned int tileHeight, unsigned int itemsToRender);
+
+		virtual void updateAtlasValues();
+
+		virtual void draw(void);
+
+		// CC Texture protocol
+		virtual CCTexture2D* getTexture(void);
+
+		virtual void setTexture(CCTexture2D *texture);
+
+		virtual bool isOpacityModifyRGB();
+		virtual void setOpacityModifyRGB(bool isOpacityModifyRGB);
+		virtual const ccColor3B& getColor(void);
+		virtual void setColor(const ccColor3B& color);
+		virtual void setOpacity(GLubyte opacity);
+
+	private :
+		void calculateMaxItems();
+		void updateBlendFunc();
+		void updateOpacityModifyRGB();
+
+		friend class CCDirector;
+		void setIgnoreContentScaleFactor(bool bIgnoreContentScaleFactor);
+	};
+
+	class CCLabelAtlas : public CCAtlasNode, public CCLabelProtocol
+	{
+	public:
+		CCLabelAtlas()
+			: m_sString("")
+		{}
+		virtual ~CCLabelAtlas()
+		{ 
+			m_sString = ""; 
+		}
+
+		static CCLabelAtlas * create(const char *string, const char *charMapFile, unsigned int itemWidth, unsigned int itemHeight, unsigned int startCharMap);
+
+		static CCLabelAtlas* create(const char *string, const char *fntFile);
+
+		bool initWithString(const char *string, const char *charMapFile, unsigned int itemWidth, unsigned int itemHeight, unsigned int startCharMap);
+
+		bool initWithString(const char *string, const char *fntFile);
+
+		bool initWithString(const char* string, CCTexture2D* texture, unsigned int itemWidth, unsigned int itemHeight, unsigned int startCharMap);
+
+		virtual void updateAtlasValues();
+		virtual void setString(const char *label);
+		virtual const char* getString(void);
+
+	#if CC_LABELATLAS_DEBUG_DRAW
+		virtual void draw();
+	#endif
+
+	protected:
+		// string to render
+		std::string m_sString;
+		// the first char in the charmap
+		unsigned int m_uMapStartChar;
+	};
+
+	class CCDirector : public CCObject, public TypeInfo
+	{
+	public:
+		CCDirector(void);
+		virtual ~CCDirector(void);
+		virtual bool init(void);
+
+		virtual long getClassTypeInfo() {
+			// static const long id = cocos2d::getHashCodeByString(typeid(cocos2d::CCDirector).name());
+			static const long id = 0;
+			return id;
+		}
+
+		inline CCScene* getRunningScene(void) { return m_pRunningScene; }
+
+		inline double getAnimationInterval(void) { return m_dAnimationInterval; }
+		virtual void setAnimationInterval(double dValue) {}
+
+		inline bool isDisplayStats(void) { return m_bDisplayStats; }
+		inline void setDisplayStats(bool bDisplayStats) { m_bDisplayStats = bDisplayStats; }
+
+		inline float getSecondsPerFrame() { return m_fSecondsPerFrame; }
+
+		inline CCEGLView* getOpenGLView(void) { return m_pobOpenGLView; }
+		void setOpenGLView(CCEGLView *pobOpenGLView);
+
+		inline bool isNextDeltaTimeZero(void) { return m_bNextDeltaTimeZero; }
+		void setNextDeltaTimeZero(bool bNextDeltaTimeZero);
+
+		inline bool isPaused(void) { return m_bPaused; }
+
+		inline unsigned int getTotalFrames(void) { return m_uTotalFrames; }
+
+		inline ccDirectorProjection getProjection(void) { return m_eProjection; }
+		void setProjection(ccDirectorProjection kProjection);
+		void reshapeProjection(const CCSize& newWindowSize);
+
+		void setViewport();
+
+		inline bool isSendCleanupToScene(void) { return m_bSendCleanupToScene; }
+
+		CCNode* getNotificationNode();
+		void setNotificationNode(CCNode *node);
+
+		CCDirectorDelegate* getDelegate() const;
+		void setDelegate(CCDirectorDelegate* pDelegate);
+
+		// window size
+		CCSize getWinSize(void);
+		CCSize getWinSizeInPixels(void);
+		CCSize getVisibleSize();
+		CCPoint getVisibleOrigin();
+
+		CCPoint convertToGL(const CCPoint& obPoint);
+
+		CCPoint convertToUI(const CCPoint& obPoint);
+
+		float getZEye(void);
+
+		// Scene Management
+
+		void runWithScene(CCScene *pScene);
+
+		RT_REMOVE(  void pushScene(CCScene *pScene);    )
+		RT_ADD(     bool pushScene(CCScene *pScene);    )
+
+		void popScene(void);
+		void popToRootScene(void);
+		void popToSceneStackLevel(int level);
+
+		RT_REMOVE(  void replaceScene(CCScene *pScene); )
+		RT_ADD(     bool replaceScene(CCScene *pScene); )
+
+		void end(void);
+		void pause(void);
+		void resume(void);
+
+	protected:
+		virtual void stopAnimation(void) {}
+		virtual void startAnimation(void) {}
+
+	public:
+		void drawScene(void);
+
+		// Memory Helper
+
+		void purgeCachedData(void);
+		void setDefaultValues(void);
+
+		// OpenGL Helper
+		void setGLDefaultValues(void);
+		void setAlphaBlending(bool bOn);
+		void setDepthTest(bool bOn);
+
+	protected:
+		virtual void mainLoop(void) {}
+
+	public:
+		void setContentScaleFactor(float scaleFactor);
+		inline float getContentScaleFactor(void) { return m_fContentScaleFactor; }
+
+	RT_ADD(
+	public:
+		void checkSceneReference(void);
+
+		CCScene* getNextScene(void);
+		int levelForSceneInStack(CCScene*);
+		bool popSceneWithTransition(float, PopTransition);
+		void popToSceneInStack(CCScene*);
+		int sceneCount(void);
+		void willSwitchToScene(CCScene*);
+
+		void removeStatsLabel(void);
+
+		void resetSmoothFixCounter(void);
+		void setDeltaTime(float);
+
+		void setupScreenScale(CCSize, CCSize, TextureQuality);
+		void updateContentScale(TextureQuality);
+		void updateScreenScale(CCSize);
+
+		void applySmoothFix();
+		void showFPSLabel();
+		void toggleShowFPS(bool, std::string, cocos2d::CCPoint);
+	protected:
+		void createStatsLabel();
+
+	protected:
+		CC_SYNTHESIZE_READONLY_NV(float, m_fScreenScaleFactor, ScreenScaleFactor);
+		CC_SYNTHESIZE_READONLY_NV(float, m_fScreenScaleFactorMax, ScreenScaleFactorMax);
+		CC_SYNTHESIZE_READONLY_NV(float, m_fScreenScaleFactorW, ScreenScaleFactorW);
+		CC_SYNTHESIZE_READONLY_NV(float, m_fScreenScaleFactorH, ScreenScaleFactorH);
+		CC_SYNTHESIZE_READONLY_NV(float, m_fScreenTop, ScreenTop);
+		CC_SYNTHESIZE_READONLY_NV_NC(float, m_fScreenBottom, ScreenBottom);
+		CC_SYNTHESIZE_READONLY_NV_NC(float, m_fScreenLeft, ScreenLeft);
+		CC_SYNTHESIZE_READONLY_NV(float, m_fScreenRight, ScreenRight);
+		CC_SYNTHESIZE_NV(CCScene*, m_pSceneReference, SceneReference);
+	)
+
+	public:
+		CC_PROPERTY(CCScheduler*, m_pScheduler, Scheduler);
+		CC_PROPERTY(CCActionManager*, m_pActionManager, ActionManager);
+		CC_PROPERTY(CCTouchDispatcher*, m_pTouchDispatcher, TouchDispatcher);
+		CC_PROPERTY(CCKeypadDispatcher*, m_pKeypadDispatcher, KeypadDispatcher);
+		RT_ADD(
+			CC_PROPERTY(CCKeyboardDispatcher*, m_pKeyboardDispatcher, KeyboardDispatcher);
+
+			CC_PROPERTY(CCMouseDispatcher*, m_pMouseDispatcher, MouseDispatcher);
+		)
+		CC_PROPERTY(CCAccelerometer*, m_pAccelerometer, Accelerometer);
+		CC_PROPERTY_READONLY(float, m_fDeltaTime, DeltaTime);
+
+		RT_ADD(
+			CC_SYNTHESIZE_NV(float, m_fActualDeltaTime, ActualDeltaTime); 
+		)
+
+	public:
+		static CCDirector* sharedDirector(void);
+
+	protected:
+		void purgeDirector();
+		RT_ADD(
+			CC_SYNTHESIZE_READONLY_NV(bool, m_bIsTransitioning, IsTransitioning);   // if in a CCTransitionScene
+
+			CC_SYNTHESIZE_NV(bool, m_bSmoothFix, SmoothFix);                        // if smooth fix is on
+			CC_SYNTHESIZE_NV(bool, m_bSmoothFixCheck, SmoothFixCheck);              // not exactly sure what this is, but the name says something ig
+			CC_SYNTHESIZE_NV(bool, m_bForceSmoothFix, ForceSmoothFix);              // if "force smooth fix" is on or not
+			CC_SYNTHESIZE_READONLY_NV(int, m_nSmoothFixCounter, SmoothFixCounter);  // not sure about this one either
+		)
+
+		bool m_bPurgeDirecotorInNextLoop; // this flag will be set to true in end()
+
+	protected:
+		void setNextScene(void);
+
+		void showStats();
+		RT_REMOVE(void createStatsLabel();)
+		void calculateMPF();
+		void getFPSImageData(unsigned char** datapointer, unsigned int* length);
+
+		void calculateDeltaTime();
+	public:
+		CCEGLView    *m_pobOpenGLView;
+
+		double m_dAnimationInterval;
+		double m_dOldAnimationInterval;
+
+		bool m_bLandscape;
+		
+		bool m_bDisplayStats;
+
+		float m_fFpsAccumDt;
+
+		float m_fAccumDt;
+		float m_fFrameRate;
+
+		CCLabelAtlas *m_pFPSLabel;
+		CCLabelAtlas *m_pSPFLabel;
+		CCLabelAtlas *m_pDrawsLabel;
+
+		bool m_bPaused;
+
+		unsigned int m_uTotalFrames;
+		unsigned int m_uFrames;
+		float m_fSecondsPerFrame;
+
+		CCScene *m_pRunningScene;
+
+		CCScene *m_pNextScene;
+
+		bool    m_bSendCleanupToScene;
+
+		CCArray* m_pobScenesStack;
+
+		struct cc_timeval *m_pLastUpdate;
+
+		bool m_bNextDeltaTimeZero;
+
+		ccDirectorProjection m_eProjection;
+
+		CCSize m_obWinSizeInPoints;
+
+		float    m_fContentScaleFactor;
+
+		char *m_pszFPS;
+
+		CCNode *m_pNotificationNode;
+
+		CCDirectorDelegate *m_pProjectionDelegate;
+
+		RT_ADD(
+			CC_SYNTHESIZE(CCSceneDelegate*, m_pAppDelegate, SceneDelegate);
+			bool m_bDisplayFPS;
+			CCLabelBMFont* m_pFPSNode;
+			CCSize m_obScaleFactor;
+			CCSize m_obResolutionInPixels;
+			CC_SYNTHESIZE_READONLY_NV(TextureQuality, m_eTextureQuality, LoadedTextureQuality);
+			CC_SYNTHESIZE_NV(bool, m_bDontCallWillSwitch, DontCallWillSwitch);
+			void* m_unknownPtr2;
+			void* m_unknownPtr3;
+		)
+
+		friend class CCEGLViewProtocol;
+	};
+
+
 	// CCTextFieldTTF
 	class CCLabelTTF : public CCSprite, public CCLabelProtocol
 	{
@@ -4577,6 +5521,8 @@ namespace cocos2d
 	private:
 		class LengthStack;
 		LengthStack * m_pLens;
+	public:
+		int m_uCursorPos;
 	};
 
 
@@ -4681,119 +5627,6 @@ namespace cocos2d
 			float m_fMaxSeg;
 			bool m_bDontOpacityFade;
 		)
-	};
-
-
-	// CCTouchDispatcher
-	class  CCTouchHandler : public CCObject
-	{
-	public:
-		inline CCTouchHandler() = default;
-		virtual ~CCTouchHandler(void);
-
-		CCTouchDelegate* getDelegate();
-		void setDelegate(CCTouchDelegate *pDelegate);
-
-		int getPriority(void);
-		void setPriority(int nPriority);
-
-		int getEnabledSelectors(void);
-		void setEnalbedSelectors(int nValue);
-
-		virtual bool initWithDelegate(CCTouchDelegate *pDelegate, int nPriority);
-
-	public:
-		static CCTouchHandler* handlerWithDelegate(CCTouchDelegate *pDelegate, int nPriority);
-
-	public:
-		CCTouchDelegate *m_pDelegate;
-		int m_nPriority;
-		int m_nEnabledSelectors;
-	};
-
-	class EGLTouchDelegate
-	{
-	public:
-		virtual void touchesBegan(CCSet* touches, CCEvent* pEvent) = 0;
-		virtual void touchesMoved(CCSet* touches, CCEvent* pEvent) = 0;
-		virtual void touchesEnded(CCSet* touches, CCEvent* pEvent) = 0;
-		virtual void touchesCancelled(CCSet* touches, CCEvent* pEvent) = 0;
-		virtual ~EGLTouchDelegate() {}
-	};
-
-	class CCTouchDispatcher : public CCObject, public EGLTouchDelegate
-	{
-	public:
-		~CCTouchDispatcher();
-		bool init(void);
-		CCTouchDispatcher()
-			: m_pTargetedHandlers(NULL)
-			, m_pStandardHandlers(NULL)
-			, m_pHandlersToAdd(NULL)
-			, m_pHandlersToRemove(NULL)
-		{}
-
-	public:
-		bool isDispatchEvents(void);
-		void setDispatchEvents(bool bDispatchEvents);
-
-		void addStandardDelegate(CCTouchDelegate *pDelegate, int nPriority);
-
-		void addTargetedDelegate(CCTouchDelegate *pDelegate, int nPriority, bool bSwallowsTouches);
-
-		void removeDelegate(CCTouchDelegate *pDelegate);
-
-		void removeAllDelegates(void);
-
-		void setPriority(int nPriority, CCTouchDelegate *pDelegate);
-		void touches(CCSet *pTouches, CCEvent *pEvent, unsigned int uIndex);
-		virtual void touchesBegan(CCSet* touches, CCEvent* pEvent);
-		virtual void touchesMoved(CCSet* touches, CCEvent* pEvent);
-		virtual void touchesEnded(CCSet* touches, CCEvent* pEvent);
-		virtual void touchesCancelled(CCSet* touches, CCEvent* pEvent);
-
-	public:
-		CCTouchHandler* findHandler(CCTouchDelegate *pDelegate);
-
-		void addPrioTargetedDelegate(cocos2d::CCTouchDelegate*, int, bool);
-		bool isUsingForcePrio();
-		void registerForcePrio(cocos2d::CCObject*, int);
-		void unregisterForcePrio(cocos2d::CCObject*);
-
-	private:
-		RT_ADD(
-			void incrementForcePrio(int priority);
-			void decrementForcePrio(int priority);
-		)
-
-	protected:
-		void forceRemoveDelegate(CCTouchDelegate *pDelegate);
-		void forceAddHandler(CCTouchHandler *pHandler, CCArray* pArray);
-		void forceRemoveAllDelegates(void);
-		void rearrangeHandlers(CCArray* pArray);
-		CCTouchHandler* findHandler(CCArray* pArray, CCTouchDelegate *pDelegate);
-
-	public:
-		CCArray* m_pTargetedHandlers;
-		CCArray* m_pStandardHandlers;
-
-		bool m_bLocked;
-		bool m_bToAdd;
-		bool m_bToRemove;
-		CCArray* m_pHandlersToAdd;
-		struct _ccCArray *m_pHandlersToRemove;
-		bool m_bToQuit;
-		bool m_bDispatchEvents;
-
-		// 4, 1 for each type of event
-		struct ccTouchHandlerHelperData m_sHandlerHelperData[ccTouchMax];
-
-	protected:
-		// 2.2 changes
-
-		CC_SYNTHESIZE_NV(int, m_forcePrio, ForcePrio);
-		void* m_unknown;
-		CC_SYNTHESIZE_NV(int, m_targetPrio, TargetPrio);
 	};
 
 

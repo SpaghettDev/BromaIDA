@@ -1,9 +1,8 @@
 from typing import get_args, Union, NoReturn, Optional
 
 from idaapi import (
-    get_imagebase, get_inf_structure, get_file_type_name,
-    BADADDR, SN_NOWARN,
-    f_PE, f_MACHO
+    get_imagebase, get_file_type_name,
+    BADADDR, SN_NOWARN
 )
 from ida_kernwin import ask_buttons, ask_str, ASKBTN_BTN1
 from ida_name import get_name_ea
@@ -11,15 +10,10 @@ from idc import set_name
 
 from sys import path as sys_path
 from os import path as os_path
-from re import sub
 from pathlib import Path
 
-from broma_ida.broma.constants import (
-    BROMA_PLATFORMS, CPP_TYPE_QUALIFIERS, CPP_DATA_TYPES,
-    CPP_PRIMITIVES
-)
+from broma_ida.broma.constants import BROMA_PLATFORMS
 from broma_ida.broma.binding import Binding
-from broma_ida.broma.argtype import ArgType
 
 
 g_platform: Optional[BROMA_PLATFORMS] = None
@@ -121,27 +115,21 @@ def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
     if g_platform is not None:
         return g_platform
 
-    structure_info = get_inf_structure()
+    structure_info = get_file_type_name()
 
-    if structure_info.filetype == f_PE:
+    if "PE" in structure_info:
         g_platform = "win"
         return "win"
+    elif structure_info.endswith("ARM64"):
+        g_platform = "m1"
+        return "m1"
+    elif structure_info.endswith("X86_64"):
+        g_platform = "imac"
+        return "imac"
 
-    if structure_info.filetype == f_MACHO:
-        file_type_name = get_file_type_name()
-
-        if file_type_name.endswith("ARM64"):
-            g_platform = "ios"
-            return "ios"
-        elif file_type_name.endswith("X86_64"):
-            g_platform = "mac"
-            return "mac"
-
-    if g_platform == "":
-        platform = ask_str(
-            "win", 256, "Enter a platform (win, mac or ios)"
-        )
-        g_platform = platform
+    platform = ask_str(
+        "win", 256, "Enter a platform (win, imac (intel mac), m1 or ios)"
+    )
 
     if platform not in get_args(BROMA_PLATFORMS):
         popup(
@@ -151,6 +139,8 @@ def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
             }\"))"""
         )
         stop()
+
+    g_platform = platform
 
     return platform
 
@@ -167,68 +157,11 @@ def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
     platform_to_printable = {
         "win": "Windows",
         "ios": "iOS",
-        "mac": "MacOS"  # MacchewOS my beloved
+        "imac": "Intel MacOS",  # MacchewOS my beloved
+        "m1": "M1 MacOS"
     }
 
     return platform_to_printable[platform]
-
-
-def are_args_primitive(arguments: dict[str, ArgType]) -> bool:
-    """Checks if the arguments are all primitives because
-    importing structs isn't supported yet
-    TODO: start importing structs :D
-
-    Args:
-        arguments (dict[str, str])
-
-    Returns:
-        bool: ya
-    """
-    is_pointer_or_reference = \
-        lambda p: p[-1] == "*" or p[-1] == "&"  # noqa: E731
-    remove_pointer_or_reference = \
-        lambda p: p[:-1] if is_pointer_or_reference(p) else p  # noqa: E731
-
-    if len(arguments) == 0:
-        return True
-
-    arguments_str = {
-        name: t["type"] for name, t in arguments.items()
-    }
-
-    for name, arg_type in arguments_str.items():
-        arguments_str[name] = sub(
-            rf"""(?: )?unsigned(?!{
-                "|".join([f" {x}" for x in CPP_DATA_TYPES])
-            })""",
-            "unsigned int",
-            arg_type
-        )
-
-        for qualifier in CPP_TYPE_QUALIFIERS:
-            arguments_str[name] = sub(
-                rf"(?: )?{qualifier}(?: )?",
-                "",
-                arguments_str[name]
-            )
-
-        arguments_str[name] = remove_pointer_or_reference(arguments_str[name])
-
-    return all([
-        arg_type in CPP_PRIMITIVES for _, arg_type in arguments_str.items()
-    ])
-
-
-def is_primitive_type(ret: str) -> bool:
-    """Is a type a C++ primitive
-
-    Args:
-        ret (str): ya
-
-    Returns:
-        bool: ya
-    """
-    return ret in CPP_PRIMITIVES
 
 
 def get_ida_plugin_path() -> Optional[Path]:

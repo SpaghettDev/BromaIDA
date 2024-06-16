@@ -7,12 +7,12 @@ from subprocess import (
 g_has_pybroma: bool = False
 
 
-def install_pybroma() -> int:
+def install_pybroma() -> bool:
     """Installs PyBroma if not already installed.
     Not in utils to avoid cyclic dependencies."""
     global g_has_pybroma
     if g_has_pybroma:
-        return 0
+        return False
 
     try:
         si = STARTUPINFO()
@@ -28,27 +28,29 @@ def install_pybroma() -> int:
 
         print("[+] BromaIDA: PyBroma found")
 
-        return ret
+        return True
     except CalledProcessError:
         try:
-            print("[!] BromaIDA: PyBroma not installed! Installing...")
+            # print("[!] BromaIDA: PyBroma not installed! Installing...")
 
-            si = STARTUPINFO()
-            si.dwFlags |= STARTF_USESHOWWINDOW
-            ret = call([
-                "python", "-m", "pip", "install",
-                "https://github.com/CallocGD/PyBroma/archive/refs/heads/main.zip"
-            ], startupinfo=si, stdout=DEVNULL, stderr=STDOUT)
+            # si = STARTUPINFO()
+            # si.dwFlags |= STARTF_USESHOWWINDOW
+            # ret = call([
+            #     "python", "-m", "pip", "install",
+            #     "https://github.com/CallocGD/PyBroma/archive/refs/heads/main.zip"
+            # ], startupinfo=si, stdout=DEVNULL, stderr=STDOUT)
 
-            if ret != 0:
-                raise CalledProcessError(ret, "")
+            # if ret != 0:
+            #     raise CalledProcessError(ret, "")
 
-            g_has_pybroma = True
+            # g_has_pybroma = True
 
-            print("[+] BromaIDA: PyBroma successfully installed")
+            # print("[+] BromaIDA: PyBroma successfully installed")
 
-            return ret
+            # return ret
+            print("[!] BromaIDA: PyBroma not installed! Please install it!")
+            return False
         except CalledProcessError:
             print("[!] BromaIDA: Couldn't install PyBroma!")
 
-            return 1
+            return False

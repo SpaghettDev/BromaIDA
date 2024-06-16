@@ -89,6 +89,14 @@ class BromaCodegen:
             f.write("using TodoReturn = void; // :troll:\n")
             f.write("\n")
 
+            f.flush()
+
+            f.write("// class fwddec\n")
+            f.writelines([f"class {c};\n" for c in self._classes.keys()])
+            f.write("\n")
+
+            f.flush()
+
             f.write("// extras\n")
             for name, broma_class in Root(
                 str(self._broma_path / "Extras.bro")
@@ -96,10 +104,6 @@ class BromaCodegen:
                 f.write(
                     ClassBuilder(self._target_platform, broma_class).get_str()
                 )
-            f.write("\n")
-
-            f.write("// class fwddec\n")
-            f.writelines([f"class {c};\n" for c in self._classes.keys()])
             f.write("\n")
 
             f.flush()

@@ -1,8 +1,6 @@
 from pybroma import Class
 
-# from broma_ida.broma.constants import BROMA_PLATFORMS
-from typing import Literal
-BROMA_PLATFORMS = Literal["win", "mac", "ios"]
+from broma_ida.broma.constants import BROMA_PLATFORMS
 
 
 class ClassBuilder:
@@ -25,8 +23,7 @@ class ClassBuilder:
         has_left_functions: bool = False
 
         for field in self._broma_class.fields:
-            func_field = field.getAsFunctionBindField() or \
-                field.getAsOutOfLineField()
+            func_field = field.getAsFunctionBindField()
             member_field = field.getAsMemberField()
             pad_field = field.getAsPadField()
 
@@ -41,13 +38,6 @@ class ClassBuilder:
                         f"{a.name.replace('gd::', 'std::')} {n}"
                         for n, a in function.args.items()])
                     });\n"""
-
-                # if BIUtils.simplify_type(function.ret.name) not in CPP_PRIMITIVES and \
-                #     BIUtils.get_type_info(function.ret.name) is None:
-                #         ret_type = function.ret.name[:-1] \
-                #             if function.ret.name.endswith("*") or \
-                #             function.ret.name.endswith("&") \
-                #             else function.ret.name
 
                 has_left_functions = True
 

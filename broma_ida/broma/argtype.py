@@ -52,7 +52,9 @@ class ArgType:
         if "std::" not in t:
             return t
 
-        if t == "std::string":
+        if sub(
+            "(?: )?const(?: )?", "", t
+                ).removesuffix("&").removesuffix("*") == "std::string":
             return t
 
         if t.startswith("std::vector"):
@@ -237,7 +239,7 @@ class ArgType:
                 "{}", contained.group(1)
             ))
 
-        raise BaseException(f"[!] Couldn't expand STL type: {t}")
+        raise BaseException(f"[!] Couldn't expand STL type: '{t}'")
 
     def __init__(self, btype: Union[BaseArgType, BaseShortArgType]):
         if btype.get("reg"):

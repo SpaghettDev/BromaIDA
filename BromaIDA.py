@@ -14,7 +14,6 @@ from ida_kernwin import ask_file, ASKBTN_BTN1, ASKBTN_BTN2
 from idautils import Names
 
 from broma_ida.pybroma_installer import install_pybroma
-install_pybroma()
 
 from broma_ida.utils import (
     popup, stop, get_platform, get_platform_printable
@@ -60,6 +59,13 @@ def bida_main():
         )
 
     elif import_export_prompt == ASKBTN_BTN2:
+        popup(
+            "Ok", "Ok", None,
+            "Exporter is currently broken! "
+            "Don't rely on it exporting correctly...\n"
+            "But hey, I won't judge."
+        )
+
         platform = get_platform()
 
         # for_saving is not True because we need to read the file first
@@ -98,7 +104,7 @@ class BromaIDAPlugin(ida_plugin_t):
         """Ran on plugin load"""
         self._register_action()
 
-        if install_pybroma() != 0:
+        if not install_pybroma():
             popup(
                 "Ok", "Ok", None,
                 "Couldn't install PyBroma! "
