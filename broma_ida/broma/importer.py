@@ -48,13 +48,14 @@ class BIUtils:
     """BromaImporter utilities"""
     @staticmethod
     def get_function_info(ida_ea: int) -> Optional[ida_func_type_data_t]:
-        """_summary_
+        """Gets the info about a function
 
         Args:
-            ida_ea (int): _description_
+            ida_ea (int): The function address
 
         Returns:
-            func_type_data_t: _description_
+            Optional[ida_func_type_data_t]: The ida_func_type_data_t
+            of the function or None if not found
         """
         tif = ida_tinfo_t()
         func_info = ida_func_type_data_t()
@@ -70,14 +71,15 @@ class BIUtils:
         name: str,
         update: bool = False
     ) -> Optional[ida_tinfo_t]:
-        """_summary_
+        """Gets the info about a type/struct
 
         Args:
-            name (str): _description_
-            update (bool): _description_. Defaults to False.
+            name (str): The name of the type/struct
+            update (bool): Should update the cache. Defaults to False.
 
         Returns:
-            Optional[ida_tinfo_t]: _description_
+            Optional[ida_tinfo_t]: The ida_tinfo_t of the type
+            or None if not found
         """
         if not hasattr(BIUtils.get_type_info, "types") or update:
             BIUtils.get_type_info.types = {}
@@ -97,13 +99,13 @@ class BIUtils:
 
     @staticmethod
     def from_pybroma_args(args: dict[str, Type]) -> list[ArgType]:
-        """_summary_
+        """Converts pybroma args into a list of ArgTypes
 
         Args:
-            args (dict[str, Type]): _description_
+            args (dict[str, Type]): The pybroma args
 
         Returns:
-            list[ArgType]: _description_
+            list[ArgType]
         """
         return [
             ArgType({
@@ -197,13 +199,13 @@ class BromaImporter:
     # End of signature specific functions
 
     def _codegen_classes(self, classes: dict[str, Class]) -> bool:
-        """_summary_
+        """Codegens the file that contains the parsed broma classes
 
         Args:
-            classes (dict[str, Class]): _description_
+            classes (dict[str, Class])
 
         Returns:
-            bool:
+            bool
         """
         if not g_has_idaclang:
             return False
