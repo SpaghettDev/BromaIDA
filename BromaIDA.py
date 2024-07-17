@@ -59,14 +59,14 @@ def bida_main():
         )
 
     elif import_export_prompt == ASKBTN_BTN2:
-        popup(
-            "Ok", "Ok", None,
-            "Exporter is currently broken! "
-            "Don't rely on it exporting correctly...\n"
-            "But hey, I won't judge."
-        )
-
         platform = get_platform()
+
+        if platform.startswith("android"):
+            popup(
+                "Ok", "Ok", None,
+                "Cannot export bindings from Android binary!"
+            )
+            stop()
 
         # for_saving is not True because we need to read the file first
         # which may not even exist if the saving prompt is used

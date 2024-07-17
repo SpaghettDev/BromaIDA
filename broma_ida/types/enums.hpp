@@ -339,11 +339,11 @@ enum class PlayerCollisionDirection {
 enum class ChestSpriteState {};
 enum class FormatterType {};
 enum class AudioModType {};
-enum class FMODQueuedMusic {};
 enum class GJAreaActionType {};
 enum class GJSmartDirection {};
 enum class SmartBlockType {};
 enum class TouchTriggerControl {};
+enum class SmartPrefabResult {};
 enum class AudioSortType {};
 enum class spriteMode {};
 enum class GJAssetType {};
@@ -795,6 +795,16 @@ enum class DialogAnimationType {
 enum class CircleMode {
     Filled = 0,
     Outline = 1,
+};
+
+enum class ShipStreak {
+    None = 0,
+    ShipFire1 = 1,
+    ShipFire2 = 2,
+    ShipFire3 = 3,
+    ShipFire4 = 4,
+    ShipFire5 = 5,
+    ShipFire6 = 6,
 };
 
 

@@ -1,6 +1,6 @@
 from typing import Literal
 
-BROMA_PLATFORMS = Literal["win", "imac", "m1", "ios"]
+BROMA_PLATFORMS = Literal["win", "imac", "m1", "ios", "android32", "android64"]
 
 BROMA_CALLING_CONVENTIONS = Literal[
     "default", "thiscall",

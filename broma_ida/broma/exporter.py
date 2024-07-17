@@ -23,12 +23,12 @@ class BromaExporter:
     group 1: "virtual", "callback", "static", or empty
     group 2: return type
     group 3: function name
-    group 4: comma-separated parameters  or empty
+    group 4: comma-separated parameters or empty
     group 5: comma-separated platform address(es)
     """
     RX_METHOD = \
-        r"""^(?:\t| {4})(?:\/\/ )?(virtual|callback|static|)(?: )?(?:(.*) )?(\S+)\((.*)\)(?: const|)(?: = ((?:(?:win|mac|ios) (?:0[xX][0-9a-fA-F]+)(?:, )?)+))?;"""  # noqa: E501
-    RX_METHOD_PLAT_ADDR_BASE = r"""{platform} (0[xX][0-9a-fA-F]+)"""
+        r"""^(?:\t| {4})(?:\/\/ )?(virtual|callback|static|)(?: )?(?:(\S+) )?(\S+)\((.*)\)(?: const|)(?: = (?(?=inline).* \{|((?:(?:win|imac|m1|ios) (?:0[xX][0-9a-fA-F]+|inline)(?:, )?)+)))?"""  # noqa: E501
+    RX_METHOD_PLAT_ADDR_BASE = r"""{platform} (0[xX][0-9a-fA-F]+|inline)"""
 
     _filepath: str = ""
     _target_platform: BROMA_PLATFORMS
@@ -52,8 +52,8 @@ class BromaExporter:
         self,
         platforms: Optional[str]
     ) -> dict[BROMA_PLATFORMS, int]:
-        """Parses "win 0x13be40, mac 0x586990" to
-        { "win": 0x13be40, "mac": 0x586990 }
+        """Parses "win 0x13be40, mac 0x586990, m1 inline" to
+        { "win": 0x13be40, "mac": 0x586990, "m1": 0 }
 
         Args:
             platforms (str | None): Platforms string of format "plat 0xaddr"
@@ -63,11 +63,14 @@ class BromaExporter:
         """
         if platforms is None:
             return {}
+        
+        platforms_list = platforms.split(", ")
+        platforms_list = [f"""{plat.split(" ")[0]} 0x0""" if plat.endswith("inline") else plat for plat in platforms_list]
 
         return {
             cast(BROMA_PLATFORMS, plat_inf[0]): int(plat_inf[1], 16)
             for plat_inf in [
-                plat_addr.split(" ") for plat_addr in platforms.split(", ")
+                plat_addr_pair.split(" ") for plat_addr_pair in platforms_list
             ]
         }
 
@@ -85,21 +88,20 @@ class BromaExporter:
         Returns:
             str: The Broma line with the address added
         """
-        # function is inlined
-        if parsed_broma_line.string.endswith("{\n"):
-            return parsed_broma_line.string
-
         self.num_exports += 1
 
+        broma_line_no_address = search(r"\);(.*)", parsed_broma_line.string)
         # binding has no address associated to it
-        # TODO: this doesn't add binding to `...); // = idfk`
-        if parsed_broma_line.string.endswith(");\n"):
-            # strip last two characters (";\n") then add the binding's address
+        if broma_line_no_address:
             return f"""{
-                parsed_broma_line.string[:-2]
-            } = {
-                self._target_platform
-            } {hex(binding["address"])};\n"""
+                broma_line_no_address.string[
+                    :broma_line_no_address.span(0)[0]
+                ]
+            }) = {self._target_platform} {hex(binding["address"])} {
+                broma_line_no_address.string[
+                    broma_line_no_address.span(0)[0]:
+                ][2:]
+            }"""
 
         broma_binding_platforms = self._parse_method_platforms(
             parsed_broma_line.group(5)
@@ -108,9 +110,9 @@ class BromaExporter:
         # binding has another platform's address associated to it
         if self._target_platform not in broma_binding_platforms:
             return sub(
-                r"(?:(0[xX][0-9a-fA-F]+);)",
-                rf"""\1, {self._target_platform} {hex(binding["address"])};""",
-                parsed_broma_line.string, 1
+                r"((?:(?:win|imac|m1|ios) (?:0[xX][0-9a-fA-F]+|inline)(?:, )?)+)",
+                rf"""{self._target_platform} {hex(binding["address"])}, \1""",
+                parsed_broma_line.string
             )
 
         # binding has this platform's address associated to it
@@ -121,7 +123,11 @@ class BromaExporter:
                 "Mismatch in Broma for method "
                 f"""{binding["qualified_name"]} """
                 f"""(Broma: {
-                    hex(broma_binding_platforms[self._target_platform])
+                    "inlined" if broma_binding_platforms[
+                        self._target_platform
+                    ] == 0 else hex(
+                        broma_binding_platforms[self._target_platform]
+                    )
                 }. """
                 f"""idb: {hex(binding["address"])})\n"""
                 "Overwrite Broma or Keep?"
@@ -218,7 +224,7 @@ class BromaExporter:
                     fw.write(line)
                     continue
 
-                func = match(self.RX_METHOD, line)
+                func = search(self.RX_METHOD, line)
                 if func is None:
                     fw.write(line)
                     continue

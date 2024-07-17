@@ -53,19 +53,17 @@ class ClassBuilder:
                     ).replace("geode::", "")
                 } {member_field.name};\n"""
             elif pad_field is not None:
-                pad_amount = pad_field.amount.__getattribute__(
-                    self._target_platform
-                )
-
                 # skip other members because no padding for current platform
-                if pad_amount == -1:
+                if self._target_platform not in pad_field.amount.platforms_as_dict():
                     break
+
+                pad_amount = pad_field.amount.platforms_as_dict()[self._target_platform]
 
                 if has_left_functions:
                     self._class_str += "\n"
                     has_left_functions = False
 
-                self._class_str += f"""\tPAD({hex(pad_amount)});\n"""
+                self._class_str += f"""\tPAD({hex(int(pad_amount, 16))});\n"""
 
         self._class_str += "};\n\n"
 

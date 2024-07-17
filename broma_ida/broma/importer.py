@@ -1,7 +1,7 @@
 from io import TextIOWrapper
 from typing import cast, Optional
 
-from idaapi import get_imagebase
+from idaapi import get_imagebase, GN_SHORT, GN_DEMANGLED
 from idc import (
     get_name as get_ea_name, get_func_flags, get_func_cmt,
     set_func_cmt, SetType,
@@ -15,6 +15,7 @@ from ida_typeinf import (
     tinfo_t as ida_tinfo_t
 )
 from ida_nalt import get_tinfo
+from idautils import Names
 
 from re import sub
 from pathlib import Path
@@ -152,8 +153,20 @@ class BromaImporter:
         Returns:
             bool
         """
-        # TODO: impl
-        return True
+        if function is None:
+            return True
+
+        if function.rettype != binding["return_type"]:
+            return True
+
+        for i, arg in enumerate(function):
+            if i == 0 and not binding["is_static"]:
+                if str(arg) != f"""{binding["class_name"]} *""":
+                    return True
+            elif str(arg).replace(" *", "*") != binding["parameters"][i - 1]["type"]:
+                return True
+
+        return False
 
     def _get_ida_args_str(
         self,
@@ -215,7 +228,7 @@ class BromaImporter:
         if plugin_path is None:
             popup(
                 "Ok", "Ok", None,
-                "TODO"
+                "This shouldn't happen... Couldn't find plugin folder, please make an issue in the repository!"
             )
             return False
 
@@ -257,7 +270,14 @@ class BromaImporter:
             if self._codegen_classes(root.classesAsDict()):
                 if self._target_platform == "win":
                     set_parser_argv("clang", "-x c++ -target x86_64-pc-win32")
-                # TODO: handle other platforms
+                elif self._target_platform == "imac":
+                    set_parser_argv("clang", "-x c++ -target x86_64-apple-darwin")
+                elif self._target_platform == "m1":
+                    set_parser_argv("clang", "-x c++ -target arm64-apple-darwin")
+                elif self._target_platform == "android32":
+                    set_parser_argv("clang", "-x c++ -target arm64-pc-linux -mfloat-abi=hard")
+                elif self._target_platform == "android64":
+                    set_parser_argv("clang", "-x c++ -target arm-pc-linux -mfloat-abi=hard")
 
                 popup(
                     "Ok", "Ok", None,
@@ -265,15 +285,13 @@ class BromaImporter:
                     "This will probably freeze IDA for a couple of "
                     "seconds, if not minutes.\n"
                     "So don't close the plugin/IDA!\n"
-                    "(This will only happen once, unless new "
-                    "types are found in Broma)"
                 )
 
                 parse_decls_for_srclang(
                     SRCLANG_CPP,
                     None,
                     (
-                        get_ida_plugin_path() / "broma_ida" / "types" / "codegen.hpp"  # type: ignore
+                        get_ida_plugin_path() / "broma_ida" / "types" / "codegen" / f"{self._target_platform}.hpp"  # type: ignore
                     ).as_posix(),
                     True
                 )
@@ -283,7 +301,19 @@ class BromaImporter:
             holy_shit_struct = BIUtils.get_type_info("holy_shit")
 
             if holy_shit_struct:
-                self._has_types = holy_shit_struct.get_size() == 0x808
+                if self._target_platform != "android32":
+                    self._has_types = holy_shit_struct.get_size() == 0x808
+                else:
+                    self._has_types = holy_shit_struct.get_size() == 1
+
+                if not self._has_types:
+                    popup(
+                        "Ok", "Ok", None,
+                        "Mismatch in STL types! "
+                        "Function types will not be changed! "
+                        "To fix this, go to the local types window "
+                        "and delete all Cocos and GD types"
+                    )
 
             if any([
                 BIUtils.verify_type(BIUtils.get_type_info(t))
@@ -297,61 +327,105 @@ class BromaImporter:
                 popup(
                     "Ok", "Ok", None,
                     "Mismatch in cocos2d types! "
-                    "Function types will not be changed!"
+                    "Function types will not be changed! "
+                    "To fix this, go to the local types window "
+                    "and delete all Cocos and GD types"
                 )
 
-        for class_name, broma_class in root.classesAsDict().items():
-            for field in broma_class.fields:
-                function_field = field.getAsFunctionBindField()
+        if self._target_platform.startswith("android"):
+            for class_name, broma_class in root.classesAsDict().items():
+                for field in broma_class.fields:
+                    function_field = field.getAsFunctionBindField()
 
-                if function_field is None:
-                    continue
-
-                function_address = function_field.binds.__getattribute__(
-                    self._target_platform
-                )
-
-                if function_address == -1 or function_address == -2:
-                    continue
-
-                function = function_field.prototype
-
-                # Runs only for the first time an address has a duplicate
-                if function_address in self.bindings:
-                    dup_binding = self.bindings[
-                        self.bindings.index(function_address)
-                    ]
-                    error_location = \
-                        f"{class_name}::{function.name} " \
-                        f"and {dup_binding['qualified_name']} " \
-                        f"@ {hex(function_address)}"
-
-                    if f"{class_name}::{function.name}" == \
-                            dup_binding['qualified_name']:
-                        print(
-                            "[!] BromaImporter: Duplicate binding with "
-                            f"same qualified name! ({error_location})"
-                        )
-                        continue
-                    elif class_name == dup_binding['class_name']:
-                        print(
-                            "[!] BromaImporter: Duplicate binding within "
-                            f"same class! ({error_location})"
-                        )
+                    if function_field is None:
                         continue
 
-                    print(
-                        "[!] BromaImporter: Duplicate binding! "
-                        f"({class_name}::{function.name} "
-                        f"and {dup_binding['qualified_name']} "
-                        f"@ {hex(function_address)})"
+                    function = function_field.prototype
+
+                    self.bindings.append(Binding({
+                        "name": function.name,
+                        "class_name": class_name,
+                        "address": -0x1,
+                        "return_type": RetType({
+                            "name": "",
+                            "type": function.ret.name
+                        }),
+                        "parameters": BIUtils.from_pybroma_args(
+                            function.args
+                        ),
+                        "is_virtual": function.is_virtual,
+                        "is_static": function.is_static
+                    }))
+
+        else:
+            for class_name, broma_class in root.classesAsDict().items():
+                for field in broma_class.fields:
+                    function_field = field.getAsFunctionBindField()
+
+                    if function_field is None:
+                        continue
+
+                    function_address = function_field.binds.__getattribute__(
+                        self._target_platform
                     )
-                    del self.bindings[self.bindings.index(dup_binding)]
-                    self.duplicates[function_address] = []
-                    self.duplicates[function_address].append(dup_binding)
 
-                if function_address in self.duplicates:
-                    self.duplicates[function_address].append(Binding({
+                    if function_address == -1 or function_address == -2:
+                        continue
+
+                    function = function_field.prototype
+
+                    # Runs only for the first time an address has a duplicate
+                    if function_address in self.bindings:
+                        dup_binding = self.bindings[
+                            self.bindings.index(function_address)
+                        ]
+                        error_location = \
+                            f"{class_name}::{function.name} " \
+                            f"and {dup_binding['qualified_name']} " \
+                            f"@ {hex(function_address)}"
+
+                        if f"{class_name}::{function.name}" == \
+                                dup_binding["qualified_name"]:
+                            print(
+                                "[!] BromaImporter: Duplicate binding with "
+                                f"same qualified name! ({error_location})"
+                            )
+                            continue
+                        elif class_name == dup_binding["class_name"]:
+                            print(
+                                "[!] BromaImporter: Duplicate binding within "
+                                f"same class! ({error_location})"
+                            )
+                            continue
+
+                        print(
+                            "[!] BromaImporter: Duplicate binding! "
+                            f"({class_name}::{function.name} "
+                            f"and {dup_binding['qualified_name']} "
+                            f"@ {hex(function_address)})"
+                        )
+                        del self.bindings[self.bindings.index(dup_binding)]
+                        self.duplicates[function_address] = []
+                        self.duplicates[function_address].append(dup_binding)
+
+                    if function_address in self.duplicates:
+                        self.duplicates[function_address].append(Binding({
+                            "name": function.name,
+                            "class_name": class_name,
+                            "address": function_address,
+                            "return_type": RetType({
+                                "name": "",
+                                "type": function.ret.name
+                            }),
+                            "parameters": BIUtils.from_pybroma_args(
+                                function.args
+                            ),
+                            "is_virtual": function.is_virtual,
+                            "is_static": function.is_static
+                        }))
+                        continue
+
+                    self.bindings.append(Binding({
                         "name": function.name,
                         "class_name": class_name,
                         "address": function_address,
@@ -359,26 +433,12 @@ class BromaImporter:
                             "name": "",
                             "type": function.ret.name
                         }),
-                        "parameters": BIUtils.from_pybroma_args(function.args),
+                        "parameters": BIUtils.from_pybroma_args(
+                            function.args
+                        ),
                         "is_virtual": function.is_virtual,
                         "is_static": function.is_static
                     }))
-                    continue
-
-                self.bindings.append(Binding({
-                    "name": function.name,
-                    "class_name": class_name,
-                    "address": function_address,
-                    "return_type": RetType({
-                        "name": "",
-                        "type": function.ret.name
-                    }),
-                    "parameters": BIUtils.from_pybroma_args(function.args),
-                    "is_virtual": function.is_virtual,
-                    "is_static": function.is_static
-                }))
-
-        file.close()
 
         print(
             f"\n\n[+] BromaImporter: Read {len(self.bindings)} "
@@ -389,6 +449,36 @@ class BromaImporter:
 
     def import_into_idb(self):
         """Imports the bindings into the current idb"""
+
+        if self._target_platform.startswith("android"):
+            if not self._has_types:
+                return
+
+            ida_addresses: dict[str, int] = {}
+
+            for addr, _ in Names():
+                demangled_name = sub(
+                    r"(\S+)::(\S+)\(.*\)",
+                    r"\1::\2",
+                    get_ea_name(addr, GN_SHORT | GN_DEMANGLED)
+                )
+                ida_addresses[demangled_name] = addr
+
+            for binding in self.bindings:
+                ida_ea = ida_addresses.get(binding["qualified_name"], -0x1)
+
+                if ida_ea == -0x1:
+                    continue
+
+                if self._has_mismatch(
+                    cast(
+                        ida_func_type_data_t,
+                        BIUtils.get_function_info(ida_ea)
+                        ), binding
+                    ):
+                    SetType(ida_ea, self._get_function_signature(binding))
+
+            return
 
         # first, handle non-duplicates
         for binding in self.bindings:
@@ -442,7 +532,7 @@ class BromaImporter:
                 elif mismatch_popup == ASKBTN_CANCEL:
                     stop()
 
-        # and now for what took me countless hours of debugging :D
+        # and now handle duplicates
         for addr, bindings in self.duplicates.items():
             ida_ea = get_imagebase() + addr
 

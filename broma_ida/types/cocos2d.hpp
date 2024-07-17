@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <climits>
 
 #ifndef PAD
 #define STR_CONCAT_WRAPPER(a, b) a ## b
@@ -852,6 +853,13 @@ namespace cocos2d
 		} PopTransition;
 	)
 
+	typedef enum {
+		/// Radial Counter-Clockwise
+		kCCProgressTimerTypeRadial,
+		/// Bar
+		kCCProgressTimerTypeBar,
+	} CCProgressTimerType;
+
 
 	// structs
 	struct _listEntry;
@@ -1268,7 +1276,7 @@ namespace cocos2d
 		virtual void visit(const CCSet *p);
 	};
 
-	class CCObject
+	class CCObject : public CCCopying
 	{
 	public:
 		unsigned int m_uID;
@@ -2058,14 +2066,12 @@ namespace cocos2d
 	{
 	public:
 		CCNode(void);
-
 		virtual ~CCNode(void);
 
 		virtual bool init();
 		static CCNode * create(void);
-		
 		const char* description(void);
-		
+
 		virtual void setZOrder(int zOrder);
 		virtual void _setZOrder(int z);
 		virtual int getZOrder();
@@ -2081,8 +2087,7 @@ namespace cocos2d
 
 		virtual void setScale(float scale);
 		virtual float getScale();
-
-		virtual void setScale(float fScaleX,float fScaleY);
+		virtual void setScale(float fScaleX, float fScaleY);
 
 		virtual void setPosition(const CCPoint &position);
 		virtual const CCPoint& getPosition();
@@ -2106,7 +2111,8 @@ namespace cocos2d
 		virtual void setContentSize(const CCSize& contentSize);
 		virtual const CCSize& getContentSize() const;
 
-		RT_ADD(virtual CCSize getScaledContentSize(void); )
+		// @note RobTop Addition
+		virtual CCSize getScaledContentSize(void);
 
 		virtual void setVisible(bool visible);
 		virtual bool isVisible();
@@ -2129,12 +2135,12 @@ namespace cocos2d
 		virtual void ignoreAnchorPointForPosition(bool ignore);
 		virtual bool isIgnoreAnchorPointForPosition();
 
-		virtual void addChild(CCNode * child);
-		virtual void addChild(CCNode * child, int zOrder);
+		virtual void addChild(CCNode* child);
+		virtual void addChild(CCNode* child, int zOrder);
 		virtual void addChild(CCNode* child, int zOrder, int tag);
-		virtual CCNode * getChildByTag(int tag);
-		virtual CCArray* getChildren();
 
+		virtual CCNode* getChildByTag(int tag);
+		virtual CCArray* getChildren();
 		virtual unsigned int getChildrenCount(void) const;
 
 		virtual void setParent(CCNode* parent);
@@ -2143,7 +2149,8 @@ namespace cocos2d
 		virtual void removeFromParent();
 		virtual void removeFromParentAndCleanup(bool cleanup);
 
-		RT_ADD( virtual void removeMeAndCleanup(void);  )
+		// @note RobTop Addition
+		virtual void removeMeAndCleanup(void);
 
 		virtual void removeChild(CCNode* child);
 		virtual void removeChild(CCNode* child, bool cleanup);
@@ -2152,26 +2159,33 @@ namespace cocos2d
 		virtual void removeAllChildren();
 		virtual void removeAllChildrenWithCleanup(bool cleanup);
 
-		virtual void reorderChild(CCNode * child, int zOrder);
+		virtual void reorderChild(CCNode* child, int zOrder);
 
 		virtual void sortAllChildren();
 
 		virtual CCGridBase* getGrid();
 		virtual void setGrid(CCGridBase *pGrid);
-		
-		RT_REMOVE(  virtual int getTag() const; )
-		RT_REMOVE(  virtual void setTag(int nTag);  )
+
+		// Robtop Removal
+		// virtual int getTag() const;
+
+		// Robtop Removal
+		// virtual void setTag(int nTag);
 
 		virtual void* getUserData();
-		virtual void setUserData(void *pUserData);
+		virtual void setUserData(void* pUserData);
 
 		virtual CCObject* getUserObject();
 		virtual void setUserObject(CCObject *pUserObject);
+		
+	private:
+		virtual CCGLProgram* getShaderProgram();
+		virtual void setShaderProgram(CCGLProgram *pShaderProgram);
 
-	public:
 		virtual CCCamera* getCamera();
 
 		virtual bool isRunning();
+
 		virtual void registerScriptHandler(int handler);
 		virtual void unregisterScriptHandler(void);
 		inline int getScriptHandler() { return m_nScriptHandler; };
@@ -2179,114 +2193,87 @@ namespace cocos2d
 		void scheduleUpdateWithPriorityLua(int nHandler, int priority);
 
 		virtual void onEnter();
-
 		virtual void onEnterTransitionDidFinish();
-
 		virtual void onExit();
-
 		virtual void onExitTransitionDidStart();
 
 		virtual void cleanup(void);
 
 		virtual void draw(void);
-
 		virtual void visit(void);
-		
+
 		CCRect boundingBox(void);
 
 		virtual void setActionManager(CCActionManager* actionManager);
 		virtual CCActionManager* getActionManager();
-		
+
 		CCAction* runAction(CCAction* action);
-
 		void stopAllActions(void);
-
 		void stopAction(CCAction* action);
-
 		void stopActionByTag(int tag);
 
 		CCAction* getActionByTag(int tag);
-
 		unsigned int numberOfRunningActions(void);
 
 		virtual void setScheduler(CCScheduler* scheduler);
 		virtual CCScheduler* getScheduler();
-		
+
 		bool isScheduled(SEL_SCHEDULE selector);
 
 		void scheduleUpdate(void);
-
 		void scheduleUpdateWithPriority(int priority);
-
 		void unscheduleUpdate(void);
 
 		void schedule(SEL_SCHEDULE selector, float interval, unsigned int repeat, float delay);
-		
 		void schedule(SEL_SCHEDULE selector, float interval);
-		
 		void scheduleOnce(SEL_SCHEDULE selector, float delay);
-		
 		void schedule(SEL_SCHEDULE selector);
-		
-		void unschedule(SEL_SCHEDULE selector);
 
+		void unschedule(SEL_SCHEDULE selector);
 		void unscheduleAllSelectors(void);
 
 		void resumeSchedulerAndActions(void);
 		void pauseSchedulerAndActions(void);
-		
+
 		virtual void update(float delta);
 
 		void transform(void);
 		void transformAncestors(void);
 		virtual void updateTransform(void);
 		
-		RT_REMOVE(  virtual CCAffineTransform nodeToParentTransform(void);          )
-		RT_ADD(     virtual const CCAffineTransform nodeToParentTransform(void);    )
-
+		// RobTop addition
+		virtual const CCAffineTransform nodeToParentTransform(void);
 		// 2.2 additions
 		virtual const CCAffineTransform nodeToParentTransformFast();
-
-		RT_REMOVE(  virtual CCAffineTransform parentToNodeTransform(void);      )
-		RT_ADD(     virtual const CCAffineTransform parentToNodeTransform(void);)
-
+		// Robtop Addition
+		virtual const CCAffineTransform parentToNodeTransform(void);
 		virtual CCAffineTransform nodeToWorldTransform(void);
-
 		// 2.2 additions
 		virtual CCAffineTransform nodeToWorldTransformFast();
-
 		virtual CCAffineTransform worldToNodeTransform(void);
 
 		CCPoint convertToNodeSpace(const CCPoint& worldPoint);
-		
 		CCPoint convertToWorldSpace(const CCPoint& nodePoint);
-		
 		CCPoint convertToNodeSpaceAR(const CCPoint& worldPoint);
-		
 		CCPoint convertToWorldSpaceAR(const CCPoint& nodePoint);
-
-		CCPoint convertTouchToNodeSpace(CCTouch * touch);
-
-		CCPoint convertTouchToNodeSpaceAR(CCTouch * touch);
+		CCPoint convertTouchToNodeSpace(CCTouch* touch);
+		CCPoint convertTouchToNodeSpaceAR(CCTouch* touch);
 		
 		void setAdditionalTransform(const CCAffineTransform& additionalTransform);
-	
-		CCComponent* getComponent(const char *pName) const;
-		
-		virtual bool addComponent(CCComponent *pComponent);
-		
-		virtual bool removeComponent(const char *pName);
 
-		virtual bool removeComponent(CCComponent *pComponent);
-		
+		CCComponent* getComponent(const char *pName) const;
+
+		virtual bool addComponent(CCComponent* pComponent);
+		virtual bool removeComponent(const char* pName);
+		virtual bool removeComponent(CCComponent* pComponent);
+
 		virtual void removeAllComponents();
 		
-		RT_ADD(
-			virtual void updateTweenAction(float, const char*);
-
-			CCNode& operator=(const CCNode&);
-		)
-
+		// @note RobTop Addition
+		virtual void updateTweenAction(float, const char*);
+		// @note RobTop Addition
+		CCNode& operator=(const CCNode&);
+		// 2.2 additions
 		virtual void updateTweenActionInt(float, int);
 
 		cocos2d::CCAffineTransform getTransformTemp();
@@ -2306,79 +2293,84 @@ namespace cocos2d
 	private:
 		void childrenAlloc(void);
 		void insertChild(CCNode* child, int z);
-		void detachChild(CCNode *child, bool doCleanup);
+		void detachChild(CCNode* child, bool doCleanup);
+
 		CCPoint convertToWindowSpace(const CCPoint& nodePoint);
 
 	protected:
-		float m_fRotationX;
-		float m_fRotationY;
+		float m_fRotationX;                 ///< rotation angle on x-axis
+		float m_fRotationY;                 ///< rotation angle on y-axis
 		
-		float m_fScaleX;
-		float m_fScaleY;
+		float m_fScaleX;                    ///< scaling factor on x-axis
+		float m_fScaleY;                    ///< scaling factor on y-axis
 		
-		float m_fVertexZ;
+		float m_fVertexZ;                   ///< OpenGL real Z vertex
 		
-		CCPoint m_obPosition;
+		CCPoint m_obPosition;               ///< position of the node
 		
-		float m_fSkewX;
-		float m_fSkewY;
+		float m_fSkewX;                     ///< skew angle on x-axis
+		float m_fSkewY;                     ///< skew angle on y-axis
 		
-		CCPoint m_obAnchorPointInPoints;
-		CCPoint m_obAnchorPoint;
+		CCPoint m_obAnchorPointInPoints;    ///< anchor point in points
+		CCPoint m_obAnchorPoint;            ///< anchor point normalized (NOT in points)
 		
-		CCSize m_obContentSize;
+		CCSize m_obContentSize;             ///< untransformed size of the node
 		
 		
-		CCAffineTransform m_sAdditionalTransform;
-		CCAffineTransform m_sTransform;
-		CCAffineTransform m_sInverse;
+		CCAffineTransform m_sAdditionalTransform; ///< transform
+		CCAffineTransform m_sTransform;     ///< transform
+		CCAffineTransform m_sInverse;       ///< transform
 		
-		CCCamera *m_pCamera;
+		CCCamera* m_pCamera;                ///< a camera
 		
-		CCGridBase *m_pGrid;
-		
-		// 2.2 additions
-		RT_REMOVE(  int m_nZOrder; )
-		
-		CCArray *m_pChildren;
-		CCNode *m_pParent;
-		
-		RT_REMOVE(  int m_nTag; )
-		
-		void *m_pUserData;
-		CCObject *m_pUserObject;
-		
-		CCGLProgram *m_pShaderProgram;
-		
-		ccGLServerState m_eGLServerState;
+		CCGridBase* m_pGrid;                ///< a grid
 		
 		// 2.2 additions
-		RT_REMOVE( unsigned int m_uOrderOfArrival; )
+		// Robtop Removal
+		// int m_nZOrder;                     ///< z-order value that affects the draw order
 		
-		CCScheduler *m_pScheduler;
+		CCArray* m_pChildren;               ///< array of children nodes
+		CCNode* m_pParent;                  ///< weak reference to parent node
 		
-		CCActionManager *m_pActionManager;
+		// Robtop Removal
+		// int m_nTag;                         ///< a tag. Can be any number you assigned just to identify this node
 		
-		bool m_bRunning;
+		void* m_pUserData;                  ///< A user assingned void pointer, Can be point to any cpp object
+		CCObject* m_pUserObject;            ///< A user assigned CCObject
 		
-		bool m_bTransformDirty;
-		bool m_bInverseDirty;
-		bool m_bAdditionalTransformDirty;
+		CCGLProgram* m_pShaderProgram;      ///< OpenGL shader
+		
+		ccGLServerState m_eGLServerState;   ///< OpenGL servier side state
+		
+		// 2.2 additions
+		// Robtop Removal
+		// unsigned int m_uOrderOfArrival;     ///< used to preserve sequence while sorting children with the same zOrder
+		
+		CCScheduler* m_pScheduler;          ///< scheduler used to schedule timers and updates
+		
+		CCActionManager* m_pActionManager;  ///< a pointer to ActionManager singleton, which is used to handle all the actions
+		
+		bool m_bRunning;                    ///< is running
+		
+		bool m_bTransformDirty;             ///< transform dirty flag
+		bool m_bInverseDirty;               ///< transform dirty flag
+		bool m_bAdditionalTransformDirty;   ///< The flag to check whether the additional transform is dirty
 
 		// 2.2 additions
-		PAD(10);
+		PAD(10); // i dont know if this is related to transform at all, but its here
 		
-		bool m_bVisible;
+		bool m_bVisible;                    ///< is this node visible
 		
-		bool m_bIgnoreAnchorPointForPosition;
+		bool m_bIgnoreAnchorPointForPosition; ///< true if the Anchor Point will be (0,0) when you position the CCNode, false otherwise.
+											///< Used by CCLayer and CCScene.
 		
-		bool m_bReorderChildDirty;
+		bool m_bReorderChildDirty;          ///< children order dirty flag
 		
-		int m_nScriptHandler;
-		int m_nUpdateScriptHandler;
-		ccScriptType m_eScriptType;
+		int m_nScriptHandler;               ///< script handler for onEnter() & onExit(), used in Javascript binding and Lua binding.
+		int m_nUpdateScriptHandler;         ///< script handler for update() callback per frame, which is invoked from lua & javascript.
+		ccScriptType m_eScriptType;         ///< type of script binding, lua or javascript
 		
-		CCComponentContainer *m_pComponentContainer;
+		CCComponentContainer* m_pComponentContainer;        ///< Dictionary of components
 
 		// 2.2 additions
 		bool m_bUnkBool1;
@@ -2632,7 +2624,6 @@ namespace cocos2d
 		bool		_cascadeColorEnabled;
 		bool        _cascadeOpacityEnabled;
 	};
-
 
 	// CCLayerColor
 	class CCBlendProtocol
@@ -3352,6 +3343,61 @@ namespace cocos2d
 			// 2.2 additions
 			// int m_nUnknown;
 		)
+	};
+
+
+	// CCProgressTimer
+	class CCProgressTimer : public CCNodeRGBA
+	{
+	public:
+		CCProgressTimer();
+		~CCProgressTimer(void);
+
+		inline CCProgressTimerType getType(void) { return m_eType; }
+		inline float getPercentage(void) {return m_fPercentage; }
+		inline CCSprite* getSprite(void) { return m_pSprite; }
+
+		bool initWithSprite(CCSprite* sp);
+
+		void setPercentage(float fPercentage);
+		void setSprite(CCSprite *pSprite);
+		void setType(CCProgressTimerType type);
+		void setReverseProgress(bool reverse);
+
+		virtual void draw(void);
+		void setAnchorPoint(CCPoint anchorPoint);
+
+		virtual void setColor(const ccColor3B& color);
+		virtual const ccColor3B& getColor() const;
+		virtual GLubyte getOpacity() const;
+		virtual void setOpacity(GLubyte opacity);
+		
+		inline bool isReverseDirection() { return m_bReverseDirection; };
+		inline void setReverseDirection(bool value) { m_bReverseDirection = value; };
+
+	public:
+		static CCProgressTimer* create(CCSprite* sp);
+
+	protected:
+		ccTex2F textureCoordFromAlphaPoint(CCPoint alpha);
+		ccVertex2F vertexFromAlphaPoint(CCPoint alpha);
+		void updateProgress(void);
+		void updateBar(void);
+		void updateRadial(void);
+		void updateColor(void);
+		CCPoint boundaryTexCoord(char index);
+
+	protected:
+		CCProgressTimerType m_eType;
+		float m_fPercentage;
+		CCSprite* m_pSprite;
+		int m_nVertexDataCount;
+		ccV2F_C4B_T2F *m_pVertexData;
+
+		CC_PROPERTY(CCPoint, m_tMidpoint, Midpoint);
+		CC_SYNTHESIZE(CCPoint, m_tBarChangeRate, BarChangeRate);
+
+		bool m_bReverseDirection;
 	};
 
 

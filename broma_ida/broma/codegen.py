@@ -35,13 +35,14 @@ class BromaCodegen:
         self._broma_path = broma_path
 
     def write(self):
-        """_summary_
+        """Dumps codegenned classes, structs and enums
+        to the path supplied in __init__
 
         Args:
             path (Path): _description_
         """
         with open(
-            self._path / "codegen.hpp",
+            self._path / "codegen." / f"{self._target_platform}.hpp",
             "w",
             buffering=10*1024*1024
         ) as f:
@@ -92,7 +93,16 @@ class BromaCodegen:
             f.flush()
 
             f.write("// class fwddec\n")
-            f.writelines([f"class {c};\n" for c in self._classes.keys()])
+            for c in self._classes.keys():
+                if "::" in c:
+                    split_c = c.split("::")
+
+                    if len(split_c) == 2:
+                        f.write(f"""namespace {split_c[0]} {{ class {split_c[1]}; }};\n""")
+                    elif len(split_c) == 3:
+                        f.write(f"""namespace {split_c[0]} {{ namespace {split_c[1]} {{ class {split_c[2]}; }} }}\n""")
+                else:
+                    f.write(f"class {c};\n")
             f.write("\n")
 
             f.flush()

@@ -126,9 +126,18 @@ def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
     elif structure_info.endswith("X86_64"):
         g_platform = "imac"
         return "imac"
+    elif structure_info.startswith("ELF for ARM"):
+        g_platform = "android32"
+        return "android32"
+    elif structure_info.startswith("ELF64 for ARM64"):
+        g_platform = "android64"
+        return "android64"
 
     platform = ask_str(
-        "win", 256, "Enter a platform (win, imac (intel mac), m1 or ios)"
+        "win",
+        256,
+        "Enter a platform (win, imac (intel mac), m1, "
+        "ios, android32 (Android 32 bit) or android64 (Android 64 bit))"
     )
 
     if platform not in get_args(BROMA_PLATFORMS):
@@ -158,7 +167,9 @@ def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
         "win": "Windows",
         "ios": "iOS",
         "imac": "Intel MacOS",  # MacchewOS my beloved
-        "m1": "M1 MacOS"
+        "m1": "M1 MacOS",
+        "android32": "Android 32 bit",
+        "android64": "Android 64 bit"
     }
 
     return platform_to_printable[platform]
@@ -172,7 +183,7 @@ def get_ida_plugin_path() -> Optional[Path]:
     """
     paths = [path for path in sys_path if "plugins" in path]
 
-    if len(paths) != 1:
+    if len(paths) == 0:
         return None
 
     return Path(

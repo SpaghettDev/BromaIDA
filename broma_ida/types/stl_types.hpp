@@ -24,7 +24,6 @@ class EnhancedGameObject;
 struct PlayerButtonCommand;
 class EventTriggerInstance;
 class AdvancedFollowInstance;
-struct SmartPrefabResult;
 struct KeyframeObject;
 struct SavedActiveObjectState;
 struct SavedSpecialObjectState;

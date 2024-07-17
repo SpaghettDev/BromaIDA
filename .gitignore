@@ -2,4 +2,4 @@
 /**/__pycache__
 /codegen.txt
 /jupyter
-/broma_ida/types/codegen.hpp
+/broma_ida/types/codegen/*
