@@ -34,6 +34,8 @@ class BromaCodegen:
         self._path = path
         self._broma_path = broma_path
 
+        Path(self._path / "codegen").mkdir(parents=True, exist_ok=True)
+
     def write(self):
         """Dumps codegenned classes, structs and enums
         to the path supplied in __init__
@@ -42,7 +44,7 @@ class BromaCodegen:
             path (Path): _description_
         """
         with open(
-            self._path / "codegen." / f"{self._target_platform}.hpp",
+            self._path / "codegen" / f"{self._target_platform}.hpp",
             "w",
             buffering=10*1024*1024
         ) as f:
