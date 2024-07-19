@@ -9,15 +9,16 @@ Parses a Broma file and exports the bindings into a Broma file/imports the bindi
 ## Requirements
 
 - IDA 7.0 or higher
-- IDAPython Python v3.0.0 support
+- IDAPython
+- Python v3.0.0+ (tested with v3.11.9)
 - PyBroma
 - If you want to be able to import types:
   - IDAClang
-  - MSVC if on Windows, GCC if on Linux or MacOS (untested)
+  - MSVC STL headers if reversing Windows binary, GCC STL headers for the other platforms
 
 ## Features
 
-- Import method names
+- Import method names, return type and arguments
 - Export method addresses
 - Import types (see [Importing Types Requirements](#importing-types-requirements))
 - On Android binaries, fixes IDA completely messing up the arguments of functions for no reason
@@ -44,6 +45,7 @@ To import types, you must have IDAClang and the headers for the target platform.
     2. For GCC (Android binary)
         1. First get gcc-arm-none-linux-gnueabihf (i did so by using scoop; `scoop install extras/gcc-arm-none-linux-gnueabihf`)
         2. Then, in the Include Directories, set it to `C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\arm-none-linux-gnueabihf\include\c++\13.3.1;C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\arm-none-linux-gnueabihf\include\c++\13.3.1\arm-none-linux-gnueabihf;C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\arm-none-linux-gnueabihf\libc\usr\include;C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\lib\gcc\arm-none-linux-gnueabihf\13.3.1\include` (be sure to replace YOUR_NAME with your windows username)
+        3. Or use MSVC headers, i think it works fine?
     3. For GCC (MacOS and iOS), i have no clue
 3. Click on OK
 

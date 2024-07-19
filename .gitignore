@@ -1,4 +1,5 @@
 /.vscode
+/.mypy_cache
 /**/__pycache__
 /codegen.txt
 /jupyter

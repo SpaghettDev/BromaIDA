@@ -1,4 +1,3 @@
-
 class SeedValueSR
 {
 public:

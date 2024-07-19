@@ -1,10 +1,20 @@
+#include <utility>
+
+#if !defined(BROMAIDA_PLATFORM_ANDROID32) && !defined(BROMAIDA_PLATFORM_ANDROID64)
+
 #include <string>
 #include <vector>
 #include <map>
-#include <utility>
 #include <unordered_map>
 #include <set>
 #include <unordered_set>
+
+#else
+
+#include "gnustl.hpp"
+
+#endif
+
 #include "enums.hpp"
 
 namespace cocos2d

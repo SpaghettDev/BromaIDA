@@ -1,4 +1,4 @@
-VERSION = "5.0.0"
+VERSION = "5.1.0"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"

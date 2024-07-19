@@ -28,10 +28,21 @@
  ****************************************************************************/
 
 #include <cstdint>
+#include <climits>
+#include <cctype>
+
+#if !defined(BROMAIDA_PLATFORM_ANDROID32) && !defined(BROMAIDA_PLATFORM_ANDROID64)
+
 #include <string>
 #include <vector>
 #include <set>
-#include <climits>
+
+#else
+
+#include "gnustl.hpp"
+
+#endif
+
 
 #ifndef PAD
 #define STR_CONCAT_WRAPPER(a, b) a ## b
@@ -86,13 +97,13 @@ public: virtual void set##funName(const varType& var) { varName = var; }
 private: varType varName;                                             \
 public: virtual varType get##funName(void) const { return varName; }  \
 public:                                                               \
-    virtual void set##funName(varType var) {                          \
-        if (varName != var) {                                         \
-            CC_SAFE_RETAIN(var);                                      \
-            CC_SAFE_RELEASE(varName);                                 \
-            varName = var;                                            \
-        }                                                             \
-    }
+	virtual void set##funName(varType var) {                          \
+	    if (varName != var) {                                         \
+	        CC_SAFE_RETAIN(var);                                      \
+	        CC_SAFE_RELEASE(varName);                                 \
+	        varName = var;                                            \
+	    }                                                             \
+	}
 
 #define CC_SYNTHESIZE_NV(varType, varName, funName)          \
 protected: varType varName;                                  \
@@ -113,100 +124,100 @@ public: virtual varType get##funName(void);    \
 public: virtual void set##funName(varType var);
 
 #define CREATE_FUNC(__TYPE__)            \
-    static __TYPE__* create() {          \
-        __TYPE__* pRet = new __TYPE__(); \
-        if (pRet && pRet->init()) {      \
-            pRet->autorelease();         \
-            return pRet;                 \
-        }                                \
-        else {                           \
-            delete pRet;                 \
-            pRet = NULL;                 \
-            return NULL;                 \
-        }                                \
-    }
+	static __TYPE__* create() {          \
+	    __TYPE__* pRet = new __TYPE__(); \
+	    if (pRet && pRet->init()) {      \
+	        pRet->autorelease();         \
+	        return pRet;                 \
+	    }                                \
+	    else {                           \
+	        delete pRet;                 \
+	        pRet = NULL;                 \
+	        return NULL;                 \
+	    }                                \
+	}
 
 #define NODE_FUNC(__TYPE__)                           \
-    CC_DEPRECATED_ATTRIBUTE static __TYPE__* node() { \
-        __TYPE__* pRet = new __TYPE__();              \
-        if (pRet && pRet->init()) {                   \
-            pRet->autorelease();                      \
-            return pRet;                              \
-        }                                             \
-        else {                                        \
-            delete pRet;                              \
-            pRet = NULL;                              \
-            return NULL;                              \
-        }                                             \
-    }
+	CC_DEPRECATED_ATTRIBUTE static __TYPE__* node() { \
+	    __TYPE__* pRet = new __TYPE__();              \
+	    if (pRet && pRet->init()) {                   \
+	        pRet->autorelease();                      \
+	        return pRet;                              \
+	    }                                             \
+	    else {                                        \
+	        delete pRet;                              \
+	        pRet = NULL;                              \
+	        return NULL;                              \
+	    }                                             \
+	}
 
 #define CC_SAFE_DELETE(p) \
-    do {                  \
-        if (p) {          \
-            delete (p);   \
-            (p) = 0;      \
-        }                 \
-    } while (0)
+	do {                  \
+	    if (p) {          \
+	        delete (p);   \
+	        (p) = 0;      \
+	    }                 \
+	} while (0)
 
 #define CC_SAFE_DELETE_ARRAY(p) \
-    do {                        \
-        if (p) {                \
-            delete[] (p);       \
-            (p) = 0;            \
-        }                       \
-    } while (0)
+	do {                        \
+	    if (p) {                \
+	        delete[] (p);       \
+	        (p) = 0;            \
+	    }                       \
+	} while (0)
 
 #define CC_SAFE_FREE(p) \
-    do {                \
-        if (p) {        \
-            free(p);    \
-            (p) = 0;    \
-        }               \
-    } while (0)
+	do {                \
+	    if (p) {        \
+	        free(p);    \
+	        (p) = 0;    \
+	    }               \
+	} while (0)
 
 #define CC_SAFE_RELEASE(p)  \
-    do {                    \
-        if (p) {            \
-            (p)->release(); \
-        }                   \
-    } while (0)
+	do {                    \
+	    if (p) {            \
+	        (p)->release(); \
+	    }                   \
+	} while (0)
 
 #define CC_SAFE_RELEASE_NULL(p) \
-    do {                        \
-        if (p) {                \
-            (p)->release();     \
-            (p) = 0;            \
-        }                       \
-    } while (0)
+	do {                        \
+	    if (p) {                \
+	        (p)->release();     \
+	        (p) = 0;            \
+	    }                       \
+	} while (0)
 
 #define CC_SAFE_RETAIN(p)  \
-    do {                   \
-        if (p) {           \
-            (p)->retain(); \
-        }                  \
-    } while (0)
+	do {                   \
+	    if (p) {           \
+	        (p)->retain(); \
+	    }                  \
+	} while (0)
 
 #define CC_UNUSED_PARAM(unusedparam) (void)unusedparam
 #define CCAssert(cond, msg) ((void)(cond))
 
 #if defined(__GNUC__) && (__GNUC__ >= 4)
-    #define CC_FORMAT_PRINTF(formatPos, argPos) \
-        __attribute__((__format__(printf, formatPos, argPos)))
+	#define CC_FORMAT_PRINTF(formatPos, argPos) \
+	    __attribute__((__format__(printf, formatPos, argPos)))
 #elif defined(__has_attribute) && !defined(_MSC_VER)
-    #if __has_attribute(format)
-        #define CC_FORMAT_PRINTF(formatPos, argPos) \
-            __attribute__((__format__(printf, formatPos, argPos)))
-    #endif
+	#if __has_attribute(format)
+	    #define CC_FORMAT_PRINTF(formatPos, argPos) \
+	        __attribute__((__format__(printf, formatPos, argPos)))
+	#endif
 #else
-    #define CC_FORMAT_PRINTF(formatPos, argPos)
+	#define CC_FORMAT_PRINTF(formatPos, argPos)
 #endif
 
 #if defined(__GNUC__) && ((__GNUC__ >= 4) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 1)))
-    #define CC_DEPRECATED_ATTRIBUTE __attribute__((deprecated))
+	#define CC_DEPRECATED_ATTRIBUTE __attribute__((deprecated))
 #elif _MSC_VER >= 1400 // vs 2005 or higher
-    #define CC_DEPRECATED_ATTRIBUTE __declspec(deprecated)
+	#define CC_DEPRECATED_ATTRIBUTE __declspec(deprecated)
 #else
-    #define CC_DEPRECATED_ATTRIBUTE
+	#define CC_DEPRECATED_ATTRIBUTE
 #endif
 
 
@@ -609,192 +620,192 @@ namespace cocos2d
 	};
 
 	typedef enum
-    {
-        // this one might not actually exist in gd itself
-        KEY_Unknown = -0x01,
-        KEY_None = 0x00,
-        KEY_Backspace = 0x08,
-        KEY_Tab = 0x09,
-        KEY_Clear = 0x0C,
-        KEY_Enter = 0x0D,
-        KEY_Shift = 0x10,
-        KEY_Control = 0x11,
-        KEY_Alt = 0x12,
-        KEY_Pause = 0x13,
-        KEY_CapsLock = 0x14,
-        KEY_Escape = 0x1B,
-        KEY_Space = 0x20,
-        KEY_PageUp = 0x21,
-        KEY_PageDown = 0x22,
-        KEY_End = 0x23,
-        KEY_Home = 0x24,
-        KEY_Left = 0x25,
-        KEY_Up = 0x26,
-        KEY_Right = 0x27,
-        KEY_Down = 0x28,
-        KEY_Select = 0x29,
-        KEY_Print = 0x2A,
-        KEY_Execute = 0x2B,
-        KEY_PrintScreen = 0x2C,
-        KEY_Insert = 0x2D,
-        KEY_Delete = 0x2E,
-        KEY_Help = 0x2F,
-        KEY_Zero = 0x30,
-        KEY_One = 0x31,
-        KEY_Two = 0x32,
-        KEY_Three = 0x33,
-        KEY_Four = 0x34,
-        KEY_Five = 0x35,
-        KEY_Six = 0x36,
-        KEY_Seven = 0x37,
-        KEY_Eight = 0x38,
-        KEY_Nine = 0x39,
-        KEY_A = 0x41,
-        KEY_B = 0x42,
-        KEY_C = 0x43,
-        KEY_D = 0x44,
-        KEY_E = 0x45,
-        KEY_F = 0x46,
-        KEY_G = 0x47,
-        KEY_H = 0x48,
-        KEY_I = 0x49,
-        KEY_J = 0x4A,
-        KEY_K = 0x4B,
-        KEY_L = 0x4C,
-        KEY_M = 0x4D,
-        KEY_N = 0x4E,
-        KEY_O = 0x4F,
-        KEY_P = 0x50,
-        KEY_Q = 0x51,
-        KEY_R = 0x52,
-        KEY_S = 0x53,
-        KEY_T = 0x54,
-        KEY_U = 0x55,
-        KEY_V = 0x56,
-        KEY_W = 0x57,
-        KEY_X = 0x58,
-        KEY_Y = 0x59,
-        KEY_Z = 0x5A,
-        KEY_LeftWindowsKey = 0x5B,
-        KEY_RightWindowsKey = 0x5C,
-        KEY_ApplicationsKey = 0x5D,
-        KEY_Sleep = 0x5F,
-        KEY_NumPad0 = 0x60,
-        KEY_NumPad1 = 0x61,
-        KEY_NumPad2 = 0x62,
-        KEY_NumPad3 = 0x63,
-        KEY_NumPad4 = 0x64,
-        KEY_NumPad5 = 0x65,
-        KEY_NumPad6 = 0x66,
-        KEY_NumPad7 = 0x67,
-        KEY_NumPad8 = 0x68,
-        KEY_NumPad9 = 0x69,
-        KEY_Multiply = 0x6A,
-        KEY_Add = 0x6B,
-        KEY_Seperator = 0x6C,
-        KEY_Subtract = 0x6D,
-        KEY_Decimal = 0x6E,
-        KEY_Divide = 0x6F,
-        KEY_F1 = 0x70,
-        KEY_F2 = 0x71,
-        KEY_F3 = 0x72,
-        KEY_F4 = 0x73,
-        KEY_F5 = 0x74,
-        KEY_F6 = 0x75,
-        KEY_F7 = 0x76,
-        KEY_F8 = 0x77,
-        KEY_F9 = 0x78,
-        KEY_F10 = 0x79,
-        KEY_F11 = 0x7A,
-        KEY_F12 = 0x7B,
-        KEY_F13 = 0x7C,
-        KEY_F14 = 0x7D,
-        KEY_F15 = 0x7E,
-        KEY_F16 = 0x7F,
-        KEY_F17 = 0x80,
-        KEY_F18 = 0x81,
-        KEY_F19 = 0x82,
-        KEY_F20 = 0x83,
-        KEY_F21 = 0x84,
-        KEY_F22 = 0x85,
-        KEY_F23 = 0x86,
-        KEY_F24 = 0x87,
-        KEY_Numlock = 0x90,
-        KEY_ScrollLock = 0x91,
-        KEY_LeftShift = 0xA0,
-        KEY_RightShift = 0xA1,
-        KEY_LeftControl = 0xA2,
-        KEY_RightContol = 0xA3,
-        KEY_LeftMenu = 0xA4,
-        KEY_RightMenu = 0xA5,
-        KEY_BrowserBack = 0xA6,
-        KEY_BrowserForward = 0xA7,
-        KEY_BrowserRefresh = 0xA8,
-        KEY_BrowserStop = 0xA9,
-        KEY_BrowserSearch = 0xAA,
-        KEY_BrowserFavorites = 0xAB,
-        KEY_BrowserHome = 0xAC,
-        KEY_VolumeMute = 0xAD,
-        KEY_VolumeDown = 0xAE,
-        KEY_VolumeUp = 0xAF,
-        KEY_NextTrack = 0xB0,
-        KEY_PreviousTrack = 0xB1,
-        KEY_StopMedia = 0xB2,
-        KEY_PlayPause = 0xB3,
-        KEY_LaunchMail = 0xB4,
-        KEY_SelectMedia = 0xB5,
-        KEY_LaunchApp1 = 0xB6,
-        KEY_LaunchApp2 = 0xB7,
-        KEY_OEM1 = 0xBA,
-        KEY_OEMPlus = 0xB8,
-        KEY_OEMComma = 0xBC,
-        KEY_OEMMinus = 0xBD,
-        KEY_OEMPeriod = 0xBE,
-        KEY_OEM2 = 0xBF,
-        KEY_OEM3 = 0xC0,
-        KEY_OEM4 = 0xDB,
-        KEY_OEM5 = 0xDC,
-        KEY_OEM6 = 0xDD,
-        KEY_OEM7 = 0xDE,
-        KEY_OEM8 = 0xDF,
-        KEY_OEM102 = 0xE2,
-        KEY_Process = 0xE5,
-        KEY_Packet = 0xE7,
-        KEY_Attn = 0xF6,
-        KEY_CrSel = 0xF7,
-        KEY_ExSel = 0xF8,
-        KEY_EraseEOF = 0xF9,
-        KEY_Play = 0xFA,
-        KEY_Zoom = 0xFB,
-        KEY_PA1 = 0xFD,
-        KEY_OEMClear = 0xFE,
-        KEY_ArrowUp = 0x11B,
-        KEY_ArrowDown = 0x11C,
-        KEY_ArrowLeft = 0x11D,
-        KEY_ArrowRight = 0x11E,
-        CONTROLLER_A = 0x3E9,
-        CONTROLLER_B = 0x3EB,
-        CONTROLLER_Y = 0x3ED,
-        CONTROLLER_X = 0x3EF,
-        CONTROLLER_Start = 0x3F1,
-        CONTROLLER_Back = 0x3F3,
-        CONTROLLER_RB = 0x3F5,
-        CONTROLLER_LB = 0x3F7,
-        CONTROLLER_RT = 0x3F9,
-        CONTROLLER_LT = 0x3FB,
-        CONTROLLER_Up = 0x3FD,
-        CONTROLLER_Down = 0x3FF,
-        CONTROLLER_Left = 0x401,
-        CONTROLLER_Right = 0x403,
-        CONTROLLER_LTHUMBSTICK_UP = 0x405,
-        CONTROLLER_LTHUMBSTICK_DOWN = 0x407,
-        CONTROLLER_LTHUMBSTICK_LEFT = 0x409,
-        CONTROLLER_LTHUMBSTICK_RIGHT = 0x40B,
-        CONTROLLER_RTHUMBSTICK_UP = 0x40D,
-        CONTROLLER_RTHUMBSTICK_DOWN = 0x40F,
-        CONTROLLER_RTHUMBSTICK_LEFT = 0x411,
-        CONTROLLER_RTHUMBSTICK_RIGHT = 0x413,
-    } enumKeyCodes;
+	{
+	    // this one might not actually exist in gd itself
+	    KEY_Unknown = -0x01,
+	    KEY_None = 0x00,
+	    KEY_Backspace = 0x08,
+	    KEY_Tab = 0x09,
+	    KEY_Clear = 0x0C,
+	    KEY_Enter = 0x0D,
+	    KEY_Shift = 0x10,
+	    KEY_Control = 0x11,
+	    KEY_Alt = 0x12,
+	    KEY_Pause = 0x13,
+	    KEY_CapsLock = 0x14,
+	    KEY_Escape = 0x1B,
+	    KEY_Space = 0x20,
+	    KEY_PageUp = 0x21,
+	    KEY_PageDown = 0x22,
+	    KEY_End = 0x23,
+	    KEY_Home = 0x24,
+	    KEY_Left = 0x25,
+	    KEY_Up = 0x26,
+	    KEY_Right = 0x27,
+	    KEY_Down = 0x28,
+	    KEY_Select = 0x29,
+	    KEY_Print = 0x2A,
+	    KEY_Execute = 0x2B,
+	    KEY_PrintScreen = 0x2C,
+	    KEY_Insert = 0x2D,
+	    KEY_Delete = 0x2E,
+	    KEY_Help = 0x2F,
+	    KEY_Zero = 0x30,
+	    KEY_One = 0x31,
+	    KEY_Two = 0x32,
+	    KEY_Three = 0x33,
+	    KEY_Four = 0x34,
+	    KEY_Five = 0x35,
+	    KEY_Six = 0x36,
+	    KEY_Seven = 0x37,
+	    KEY_Eight = 0x38,
+	    KEY_Nine = 0x39,
+	    KEY_A = 0x41,
+	    KEY_B = 0x42,
+	    KEY_C = 0x43,
+	    KEY_D = 0x44,
+	    KEY_E = 0x45,
+	    KEY_F = 0x46,
+	    KEY_G = 0x47,
+	    KEY_H = 0x48,
+	    KEY_I = 0x49,
+	    KEY_J = 0x4A,
+	    KEY_K = 0x4B,
+	    KEY_L = 0x4C,
+	    KEY_M = 0x4D,
+	    KEY_N = 0x4E,
+	    KEY_O = 0x4F,
+	    KEY_P = 0x50,
+	    KEY_Q = 0x51,
+	    KEY_R = 0x52,
+	    KEY_S = 0x53,
+	    KEY_T = 0x54,
+	    KEY_U = 0x55,
+	    KEY_V = 0x56,
+	    KEY_W = 0x57,
+	    KEY_X = 0x58,
+	    KEY_Y = 0x59,
+	    KEY_Z = 0x5A,
+	    KEY_LeftWindowsKey = 0x5B,
+	    KEY_RightWindowsKey = 0x5C,
+	    KEY_ApplicationsKey = 0x5D,
+	    KEY_Sleep = 0x5F,
+	    KEY_NumPad0 = 0x60,
+	    KEY_NumPad1 = 0x61,
+	    KEY_NumPad2 = 0x62,
+	    KEY_NumPad3 = 0x63,
+	    KEY_NumPad4 = 0x64,
+	    KEY_NumPad5 = 0x65,
+	    KEY_NumPad6 = 0x66,
+	    KEY_NumPad7 = 0x67,
+	    KEY_NumPad8 = 0x68,
+	    KEY_NumPad9 = 0x69,
+	    KEY_Multiply = 0x6A,
+	    KEY_Add = 0x6B,
+	    KEY_Seperator = 0x6C,
+	    KEY_Subtract = 0x6D,
+	    KEY_Decimal = 0x6E,
+	    KEY_Divide = 0x6F,
+	    KEY_F1 = 0x70,
+	    KEY_F2 = 0x71,
+	    KEY_F3 = 0x72,
+	    KEY_F4 = 0x73,
+	    KEY_F5 = 0x74,
+	    KEY_F6 = 0x75,
+	    KEY_F7 = 0x76,
+	    KEY_F8 = 0x77,
+	    KEY_F9 = 0x78,
+	    KEY_F10 = 0x79,
+	    KEY_F11 = 0x7A,
+	    KEY_F12 = 0x7B,
+	    KEY_F13 = 0x7C,
+	    KEY_F14 = 0x7D,
+	    KEY_F15 = 0x7E,
+	    KEY_F16 = 0x7F,
+	    KEY_F17 = 0x80,
+	    KEY_F18 = 0x81,
+	    KEY_F19 = 0x82,
+	    KEY_F20 = 0x83,
+	    KEY_F21 = 0x84,
+	    KEY_F22 = 0x85,
+	    KEY_F23 = 0x86,
+	    KEY_F24 = 0x87,
+	    KEY_Numlock = 0x90,
+	    KEY_ScrollLock = 0x91,
+	    KEY_LeftShift = 0xA0,
+	    KEY_RightShift = 0xA1,
+	    KEY_LeftControl = 0xA2,
+	    KEY_RightContol = 0xA3,
+	    KEY_LeftMenu = 0xA4,
+	    KEY_RightMenu = 0xA5,
+	    KEY_BrowserBack = 0xA6,
+	    KEY_BrowserForward = 0xA7,
+	    KEY_BrowserRefresh = 0xA8,
+	    KEY_BrowserStop = 0xA9,
+	    KEY_BrowserSearch = 0xAA,
+	    KEY_BrowserFavorites = 0xAB,
+	    KEY_BrowserHome = 0xAC,
+	    KEY_VolumeMute = 0xAD,
+	    KEY_VolumeDown = 0xAE,
+	    KEY_VolumeUp = 0xAF,
+	    KEY_NextTrack = 0xB0,
+	    KEY_PreviousTrack = 0xB1,
+	    KEY_StopMedia = 0xB2,
+	    KEY_PlayPause = 0xB3,
+	    KEY_LaunchMail = 0xB4,
+	    KEY_SelectMedia = 0xB5,
+	    KEY_LaunchApp1 = 0xB6,
+	    KEY_LaunchApp2 = 0xB7,
+	    KEY_OEM1 = 0xBA,
+	    KEY_OEMPlus = 0xB8,
+	    KEY_OEMComma = 0xBC,
+	    KEY_OEMMinus = 0xBD,
+	    KEY_OEMPeriod = 0xBE,
+	    KEY_OEM2 = 0xBF,
+	    KEY_OEM3 = 0xC0,
+	    KEY_OEM4 = 0xDB,
+	    KEY_OEM5 = 0xDC,
+	    KEY_OEM6 = 0xDD,
+	    KEY_OEM7 = 0xDE,
+	    KEY_OEM8 = 0xDF,
+	    KEY_OEM102 = 0xE2,
+	    KEY_Process = 0xE5,
+	    KEY_Packet = 0xE7,
+	    KEY_Attn = 0xF6,
+	    KEY_CrSel = 0xF7,
+	    KEY_ExSel = 0xF8,
+	    KEY_EraseEOF = 0xF9,
+	    KEY_Play = 0xFA,
+	    KEY_Zoom = 0xFB,
+	    KEY_PA1 = 0xFD,
+	    KEY_OEMClear = 0xFE,
+	    KEY_ArrowUp = 0x11B,
+	    KEY_ArrowDown = 0x11C,
+	    KEY_ArrowLeft = 0x11D,
+	    KEY_ArrowRight = 0x11E,
+	    CONTROLLER_A = 0x3E9,
+	    CONTROLLER_B = 0x3EB,
+	    CONTROLLER_Y = 0x3ED,
+	    CONTROLLER_X = 0x3EF,
+	    CONTROLLER_Start = 0x3F1,
+	    CONTROLLER_Back = 0x3F3,
+	    CONTROLLER_RB = 0x3F5,
+	    CONTROLLER_LB = 0x3F7,
+	    CONTROLLER_RT = 0x3F9,
+	    CONTROLLER_LT = 0x3FB,
+	    CONTROLLER_Up = 0x3FD,
+	    CONTROLLER_Down = 0x3FF,
+	    CONTROLLER_Left = 0x401,
+	    CONTROLLER_Right = 0x403,
+	    CONTROLLER_LTHUMBSTICK_UP = 0x405,
+	    CONTROLLER_LTHUMBSTICK_DOWN = 0x407,
+	    CONTROLLER_LTHUMBSTICK_LEFT = 0x409,
+	    CONTROLLER_LTHUMBSTICK_RIGHT = 0x40B,
+	    CONTROLLER_RTHUMBSTICK_UP = 0x40D,
+	    CONTROLLER_RTHUMBSTICK_DOWN = 0x40F,
+	    CONTROLLER_RTHUMBSTICK_LEFT = 0x411,
+	    CONTROLLER_RTHUMBSTICK_RIGHT = 0x413,
+	} enumKeyCodes;
 
 	typedef enum {
 		kCCTouchesAllAtOnce,
@@ -822,7 +833,7 @@ namespace cocos2d
 	} tCCImageFormat;
 
 	typedef enum {
-    	/** Living particles are attached to the world and are unaffected by emitter repositioning. */
+		/** Living particles are attached to the world and are unaffected by emitter repositioning. */
 		kCCPositionTypeFree,
 
 		/** Living particles are attached to the world but will follow the emitter repositioning.
@@ -1452,7 +1463,7 @@ namespace cocos2d
 
 		unsigned int length() const;
 
-		int compare(const char *) const;
+		int compare(const char*) const;
 
 		virtual CCObject* copyWithZone(CCZone* pZone);
 		virtual bool isEqual(const CCObject* pObject);
@@ -1463,24 +1474,12 @@ namespace cocos2d
 		virtual void acceptVisitor(CCDataVisitor &visitor);
 
 	private:
-
-		bool initWithFormatAndValist(const char* format, va_list ap) {
-			bool bRet = false;
-			char* pBuf = (char*)malloc(kMaxStringLen);
-			if (pBuf != NULL)
-			{
-				vsnprintf(pBuf, kMaxStringLen, format, ap);
-				m_sString = pBuf;
-				free(pBuf);
-				bRet = true;
-			}
-			return bRet;
-		}
+		bool initWithFormatAndValist(const char* format, va_list ap);
 
 	public:
 		std::string m_sString;
 	};
-	typedef std::set<CCObject *>::iterator CCSetIterator;
+	typedef std::set<CCObject*>::iterator CCSetIterator;
 	class CCSet : public CCObject
 	{
 	public:
@@ -1841,7 +1840,7 @@ namespace cocos2d
 		void releaseGLTexture();
 
 	private:
-    	bool initPremultipliedATextureWithImage(CCImage * image, unsigned int pixelsWide, unsigned int pixelsHigh);
+		bool initPremultipliedATextureWithImage(CCImage * image, unsigned int pixelsWide, unsigned int pixelsHigh);
 
 		// By default PVR images are treated as if they don't have the alpha channel premultiplied
 		bool m_bPVRHaveAlphaPremultiplied;
@@ -3663,7 +3662,6 @@ namespace cocos2d
 		virtual bool init();
 		virtual void draw();
 
-	#if COMP_GD_VERSION > 22000
 		/** draw a dot at a position, with a given radius and color */
 		bool drawDot(const CCPoint &pos, float radius, const ccColor4F &color);
 		
@@ -3683,28 +3681,7 @@ namespace cocos2d
 		void drawPreciseCubicBezier(cocos2d::CCPoint const&, cocos2d::CCPoint const&, cocos2d::CCPoint const&, cocos2d::CCPoint const&, unsigned int, cocos2d::_ccColor4F const&);
 		bool drawLines(cocos2d::CCPoint*, unsigned int, float, cocos2d::_ccColor4F const&);
 		bool drawRect(cocos2d::CCPoint const&, cocos2d::CCPoint const&, cocos2d::_ccColor4F const&, float, cocos2d::_ccColor4F const&);
-	#else
-		/** draw a dot at a position, with a given radius and color */
-		void drawDot(const CCPoint &pos, float radius, const ccColor4F &color);
-		
-		/** draw a segment with a radius and color */
-		void drawSegment(const CCPoint &from, const CCPoint &to, float radius, const ccColor4F &color);
-		
-		/** draw a polygon with a fill color and line color 
-		* @code
-		* when this funciton bound to js,the input params are changed
-		* js:var drawPolygon(var verts, var fillColor,var borderWidth,var borderColor)
-		* @endcode
-		*/
-		void drawPolygon(CCPoint *verts, unsigned int count, const ccColor4F &fillColor, float borderWidth, const ccColor4F &borderColor);
 
-		void drawCircle(cocos2d::CCPoint const&, float, cocos2d::_ccColor4F const&, float, cocos2d::_ccColor4F const&, unsigned int);
-		void drawCubicBezier(cocos2d::CCPoint const&, cocos2d::CCPoint const&, cocos2d::CCPoint const&, cocos2d::CCPoint const&, unsigned int, cocos2d::_ccColor4F const&);
-		void drawPreciseCubicBezier(cocos2d::CCPoint const&, cocos2d::CCPoint const&, cocos2d::CCPoint const&, cocos2d::CCPoint const&, unsigned int, cocos2d::_ccColor4F const&);
-		void drawLines(cocos2d::CCPoint*, unsigned int, float, cocos2d::_ccColor4F const&);
-		void drawRect(cocos2d::CCPoint const&, cocos2d::CCPoint const&, cocos2d::_ccColor4F const&, float, cocos2d::_ccColor4F const&);
-	#endif
-		
 		void clear();
 		ccBlendFunc getBlendFunc() const;
 		void setBlendFunc(const ccBlendFunc &blendFunc);
@@ -3803,7 +3780,7 @@ namespace cocos2d
 			/** The ending radius of the particles. Only available in 'Radius' mode. */
 			float endRadius;
 			/** The ending radius variance of the particles. Only available in 'Radius' mode. */
-			float endRadiusVar;            
+			float endRadiusVar;
 			/** Number of degrees to rotate a particle around the source pos per second. Only available in 'Radius' mode. */
 			float rotatePerSecond;
 			/** Variance in degrees for rotatePerSecond. Only available in 'Radius' mode. */
@@ -4552,7 +4529,7 @@ namespace cocos2d
 		for (hash = 0; key < end; key++)
 		{
 			hash *= 16777619;
-			hash ^= (unsigned int) (unsigned char) toupper(*key);
+			hash ^= (unsigned int)(unsigned char)std::toupper(*key);
 		}
 		return (hash);
 	}
@@ -5290,9 +5267,7 @@ namespace cocos2d
 				
 				// Force update
 				if (std::string(m_string).size() > 0)
-				{
 					this->updateTexture();
-				}
 			}
 		}
 		
@@ -5306,9 +5281,7 @@ namespace cocos2d
 				
 				// Force update
 				if (std::string(m_string).size() > 0)
-				{
 					this->updateTexture();
-				}
 			}
 		}
 		
@@ -5322,9 +5295,7 @@ namespace cocos2d
 				
 				// Force update
 				if (std::string(m_string).size() > 0)
-				{
 					this->updateTexture();
-				}
 			}
 		}
 		
@@ -5338,9 +5309,7 @@ namespace cocos2d
 				
 				// Force update
 				if (std::string(m_string).size() > 0)
-				{
 					this->updateTexture();
-				}
 			}
 		}
 		

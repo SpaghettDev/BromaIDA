@@ -1,4 +1,4 @@
-// taken from http://github.com/geode-sdk/geode/blob/main/loader/include/Geode/Enums.hpp
+// taken from https://github.com/geode-sdk/bindings/blob/main/bindings/include/Geode/Enums.hpp
 
 // thanks pie
 enum class SearchType {

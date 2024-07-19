@@ -20,7 +20,7 @@ from idautils import Names
 from re import sub
 from pathlib import Path
 
-from pybroma import Root, FunctionBindField, Type, Class
+from pybroma import Root, Type, Class
 
 from broma_ida.broma.constants import BROMA_PLATFORMS
 from broma_ida.broma.binding import Binding
@@ -125,6 +125,28 @@ class BIUtils:
             return True
 
         return False
+    
+    @staticmethod
+    def get_holy_shit_struct_size(platform: BROMA_PLATFORMS) -> int:
+        """Gets the size of the STL struct for the supplied platform
+
+        Args:
+            platform (BROMA_PLATFORMS)
+
+        Returns:
+            int: size in bytes
+        """
+        # TODO: yea wth update this!!
+        plat_to_hss_size: dict[BROMA_PLATFORMS, int] = {
+            "win": 0x808,
+            "imac": 0x1,  # need them headers
+            "m1": 0x1,
+            "ios": 0x1,  # this probably will never exist
+            "android32": 0x45C,
+            "android64": 0x828
+        }
+
+        return plat_to_hss_size[platform]
 
 
 class BromaImporter:
@@ -297,40 +319,39 @@ class BromaImporter:
                 )
 
                 self._has_types = True
-        else:
-            holy_shit_struct = BIUtils.get_type_info("holy_shit")
+            else:
+                holy_shit_struct = BIUtils.get_type_info("holy_shit")
 
-            if holy_shit_struct:
-                if self._target_platform != "android32":
-                    self._has_types = holy_shit_struct.get_size() == 0x808
-                else:
-                    self._has_types = holy_shit_struct.get_size() == 1
+                if holy_shit_struct:
+                    self._has_types = holy_shit_struct.get_size() == BIUtils.get_holy_shit_strut_size(self._target_platform)
 
-                if not self._has_types:
+                    if not self._has_types:
+                        popup(
+                            "Ok", "Ok", None,
+                            "Mismatch in STL types! "
+                            "Function types will not be changed! "
+                            "To fix this, go to the local types window "
+                            "and delete all Cocos and GD types "
+                            "(as well as holy_shit struct)"
+                        )
+
+                if any([
+                    BIUtils.verify_type(BIUtils.get_type_info(t))
+                    for t in (
+                        "cocos2d::CCObject", "cocos2d::CCImage",
+                        "cocos2d::CCApplication", "cocos2d::CCDirector"
+                    )
+                ]):
+                    self._has_types = False
+
                     popup(
                         "Ok", "Ok", None,
-                        "Mismatch in STL types! "
+                        "Mismatch in cocos2d types! "
                         "Function types will not be changed! "
                         "To fix this, go to the local types window "
-                        "and delete all Cocos and GD types"
+                        "and delete all Cocos and GD types "
+                        "(as well as holy_shit struct)"
                     )
-
-            if any([
-                BIUtils.verify_type(BIUtils.get_type_info(t))
-                for t in (
-                    "cocos2d::CCObject", "cocos2d::CCImage",
-                    "cocos2d::CCApplication", "cocos2d::CCDirector"
-                )
-            ]):
-                self._has_types = False
-
-                popup(
-                    "Ok", "Ok", None,
-                    "Mismatch in cocos2d types! "
-                    "Function types will not be changed! "
-                    "To fix this, go to the local types window "
-                    "and delete all Cocos and GD types"
-                )
 
         if self._target_platform.startswith("android"):
             for class_name, broma_class in root.classesAsDict().items():

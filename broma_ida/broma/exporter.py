@@ -27,7 +27,7 @@ class BromaExporter:
     group 5: comma-separated platform address(es)
     """
     RX_METHOD = \
-        r"""^(?:\t| {4})(?:\/\/ )?(virtual|callback|static|)(?: )?(?:(\S+) )?(\S+)\((.*)\)(?: const|)(?: = (?(?=inline).* \{|((?:(?:win|imac|m1|ios) (?:0[xX][0-9a-fA-F]+|inline)(?:, )?)+)))?"""  # noqa: E501
+        r"""^(?:\t| {4})(?:\/\/ )?(virtual|callback|static|)(?: )?(?:(\S+) )?(\S+)\((.*)\)(?: const|)(?: = ((?=inline).* \{|(?!inline)((?:(?:win|imac|m1|ios) (?:0[xX][0-9a-fA-F]+|inline)(?:, )?)+)))?"""  # noqa: E501
     RX_METHOD_PLAT_ADDR_BASE = r"""{platform} (0[xX][0-9a-fA-F]+|inline)"""
 
     _filepath: str = ""
@@ -63,9 +63,11 @@ class BromaExporter:
         """
         if platforms is None:
             return {}
-        
-        platforms_list = platforms.split(", ")
-        platforms_list = [f"""{plat.split(" ")[0]} 0x0""" if plat.endswith("inline") else plat for plat in platforms_list]
+
+        platforms_list = [
+            f"""{plat.split(" ")[0]} 0x0""" if plat.endswith("inline") else plat
+            for plat in platforms.split(", ")
+        ]
 
         return {
             cast(BROMA_PLATFORMS, plat_inf[0]): int(plat_inf[1], 16)
