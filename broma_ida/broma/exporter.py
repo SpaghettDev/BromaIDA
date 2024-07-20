@@ -11,6 +11,7 @@ from broma_ida.broma.binding import Binding
 from broma_ida.utils import popup
 
 
+# TODO: overloads............
 class BromaExporter:
     """Broma exporter of all time using regex (if you couldn't already tell)"""
 
@@ -99,11 +100,11 @@ class BromaExporter:
                 broma_line_no_address.string[
                     :broma_line_no_address.span(0)[0]
                 ]
-            }) = {self._target_platform} {hex(binding["address"])} {
+            }) = {self._target_platform} {hex(binding["address"])}; {
                 broma_line_no_address.string[
                     broma_line_no_address.span(0)[0]:
                 ][2:]
-            };"""
+            }"""
 
         broma_binding_platforms = self._parse_method_platforms(
             parsed_broma_line.group(5)
