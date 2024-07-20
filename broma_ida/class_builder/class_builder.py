@@ -10,7 +10,7 @@ class ClassBuilder:
     _target_platform: BROMA_PLATFORMS
 
     def _import_class(self):
-        """_summary_"""
+        """Converts a Binding to a class string"""
         self._class_str = f"class {self._broma_class.name}"
 
         if len(self._broma_class.superclasses) != 0:

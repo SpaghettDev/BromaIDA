@@ -530,10 +530,10 @@ namespace cocos2d
 
 	// enums
 	enum class CCObjectType {
-		PlayLayer = 5,
-		LevelEditorLayer = 6,
-		GameObject = 13,
-		MenuLayer = 15,
+		PlayLayerObjectType = 5,
+		LevelEditorLayerObjectType = 6,
+		GameObjectObjectType = 13,
+		MenuLayerObjectType = 15,
 	};
 
 	typedef enum {

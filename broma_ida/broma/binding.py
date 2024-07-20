@@ -57,7 +57,7 @@ class Binding:
                 The binding
 
         Returns:
-            str: _description_
+            str
         """
         if not is_visible_cp(ord("~")) and \
                 binding["class_name"] == binding["name"][1:]:

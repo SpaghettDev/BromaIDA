@@ -176,10 +176,12 @@ def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
 
 
 def get_ida_plugin_path() -> Optional[Path]:
-    """_summary_
+    """Gets the plugin path of the IDA folder using magic
+    (why isnt this exported by the idapython api)
 
     Returns:
-        str: _description_
+        Optional[Path]: The plugin path as a Path,
+        or None if it couldn't be found
     """
     paths = [path for path in sys_path if "plugins" in path]
 

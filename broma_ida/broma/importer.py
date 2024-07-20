@@ -1,7 +1,11 @@
 from io import TextIOWrapper
 from typing import cast, Optional
+from copy import deepcopy
 
-from idaapi import get_imagebase, GN_SHORT, GN_DEMANGLED
+from idaapi import (
+    get_imagebase, apply_tinfo,
+    GN_SHORT, GN_DEMANGLED, TINFO_DEFINITE, BTF_TYPEDEF
+)
 from idc import (
     get_name as get_ea_name, get_func_flags, get_func_cmt,
     set_func_cmt, SetType,
@@ -148,20 +152,10 @@ class BIUtils:
 
         return plat_to_hss_size[platform]
 
+    # Signature stuff
 
-class BromaImporter:
-    """Broma importer of all time using PyBroma now!"""
-    _target_platform: BROMA_PLATFORMS
-    _file_path: str
-    _has_types: bool = False
-
-    bindings: list[Binding] = []
-    # { 0xaddr: [Binding, Binding, ...] }
-    duplicates: dict[int, list[Binding]] = {}
-
-    # Signature specific functions below
-    def _has_mismatch(
-        self,
+    @staticmethod
+    def has_mismatch(
         function: ida_func_type_data_t,
         binding: Binding
     ) -> bool:
@@ -185,15 +179,14 @@ class BromaImporter:
             if i == 0 and not binding["is_static"]:
                 if str(arg) != f"""{binding["class_name"]} *""":
                     return True
-            elif str(arg).replace(" *", "*") != binding["parameters"][i - 1]["type"]:
+            elif str(arg).replace(" *", "*") != binding["parameters"][
+                    i - (0 if binding["is_static"] else 1)
+                ]["type"]:
                 return True
 
         return False
 
-    def _get_ida_args_str(
-        self,
-        binding: Binding
-    ) -> str:
+    def get_ida_args_str(binding: Binding) -> str:
         """Gets a function's argument string.
 
         Args:
@@ -213,10 +206,7 @@ class BromaImporter:
             str(arg) for arg in binding["parameters"]
         ])
 
-    def _get_function_signature(
-        self,
-        binding: Binding
-    ) -> str:
+    def get_function_signature(binding: Binding) -> str:
         """Returns a C++ function signature for the given function.
 
         Args:
@@ -230,8 +220,113 @@ class BromaImporter:
             f"""{"virtual " if binding["is_virtual"] else ""}""" \
             f"""{binding["return_type"]["type"]} """ \
             f"""{binding["ida_qualified_name"]}""" \
-            f"""({self._get_ida_args_str(binding)});"""
-    # End of signature specific functions
+            f"""({BIUtils.get_ida_args_str(binding)});"""
+
+    @staticmethod
+    def set_function_signature(ea: int, binding: Binding):
+        """Set's the function at `ea`'s signature. Has custom logic for
+        functions that use STL types since those break when using SetType
+        because of the commas in the template arguments
+
+        Args:
+            ea (int)
+            binding (Binding)
+        """
+        # strip const, & and * from the type
+        strip_crp = lambda t: sub(
+            "(?: )?const(?: )?", "", t
+        ).removesuffix("&").removesuffix("*")
+
+        args_has_stl_type = False
+        ret_has_stl_type = False
+
+        # we don't have an issue with std::string, only with generic stl types
+        if "std::" in binding["return_type"]["type"] and \
+            strip_crp(binding["return_type"]["type"]) != "std::string":
+            ret_has_stl_type = True
+
+        for parameter in binding["parameters"]:
+            if strip_crp(parameter["type"]) == "std::string":
+                continue
+
+            if "std::" in parameter["type"]:
+                args_has_stl_type = True
+                break
+
+        if not args_has_stl_type and not ret_has_stl_type:
+            SetType(ea, BIUtils.get_function_signature(binding))
+            return
+
+        binding_fix = deepcopy(binding)
+        arg_stl_idx: list[int] = []
+
+        if args_has_stl_type:
+            for i in range(len(binding_fix["parameters"])):
+                if "std::" in binding_fix["parameters"][i]["type"]:
+                    arg_stl_idx.append(i)
+                    binding_fix["parameters"][i]["type"] = "void*"
+
+        if ret_has_stl_type:
+            binding_fix["return_type"]["type"] = "void*"
+
+        # first set correct amount of arguments
+        SetType(ea, BIUtils.get_function_signature(binding_fix))
+
+        function_data = BIUtils.get_function_info(ea)
+
+        for idx in arg_stl_idx:
+            stl_type = ida_tinfo_t()
+            stl_type.get_named_type(
+                get_idati(),
+                strip_crp(binding["parameters"][idx]["type"]),
+                BTF_TYPEDEF,
+                False
+            )
+
+            if binding["parameters"][idx]["type"].endswith("&") or binding["parameters"][idx]["type"].endswith("*"):
+                stl_type_ptr = ida_tinfo_t()
+                stl_type_ptr.create_ptr(stl_type)
+
+                stl_type = stl_type_ptr
+
+            if "const" in binding["parameters"][idx]["type"]:
+                stl_type.set_const()
+
+            function_data[idx + (0 if binding["is_static"] else 1)].type = stl_type
+
+        if ret_has_stl_type:
+            stl_type = ida_tinfo_t()
+            stl_type.get_named_type(
+                get_idati(),
+                strip_crp(binding["return_type"]["type"]),
+                BTF_TYPEDEF,
+                False
+            )
+
+            if binding["return_type"]["type"].endswith("&") or binding["return_type"]["type"].endswith("*"):
+                stl_type_ptr = ida_tinfo_t()
+                stl_type_ptr.create_ptr(stl_type)
+
+                stl_type = stl_type_ptr
+
+            function_data.rettype = stl_type
+
+        func_tinfo = ida_tinfo_t()
+        func_tinfo.create_func(function_data)
+
+        # then apply the actual correct type
+        apply_tinfo(ea, func_tinfo, TINFO_DEFINITE)
+
+
+class BromaImporter:
+    """Broma importer of all time using PyBroma now!"""
+    _target_platform: BROMA_PLATFORMS
+    _file_path: str
+    _has_types: bool = False
+
+    bindings: list[Binding] = []
+    # { 0xaddr: [Binding, Binding, ...] }
+    duplicates: dict[int, list[Binding]] = {}
 
     def _codegen_classes(self, classes: dict[str, Class]) -> bool:
         """Codegens the file that contains the parsed broma classes
@@ -323,7 +418,8 @@ class BromaImporter:
                 holy_shit_struct = BIUtils.get_type_info("holy_shit")
 
                 if holy_shit_struct:
-                    self._has_types = holy_shit_struct.get_size() == BIUtils.get_holy_shit_strut_size(self._target_platform)
+                    self._has_types = holy_shit_struct.get_size() == \
+                        BIUtils.get_holy_shit_struct_size(self._target_platform)
 
                     if not self._has_types:
                         popup(
@@ -369,7 +465,10 @@ class BromaImporter:
                         "address": -0x1,
                         "return_type": RetType({
                             "name": "",
-                            "type": function.ret.name
+                            "type": function.ret.name.replace(
+                                "gd::",
+                                "std::"
+                            )
                         }),
                         "parameters": BIUtils.from_pybroma_args(
                             function.args
@@ -436,7 +535,10 @@ class BromaImporter:
                             "address": function_address,
                             "return_type": RetType({
                                 "name": "",
-                                "type": function.ret.name
+                                "type": function.ret.name.replace(
+                                    "gd::",
+                                    "std::"
+                                )
                             }),
                             "parameters": BIUtils.from_pybroma_args(
                                 function.args
@@ -452,7 +554,10 @@ class BromaImporter:
                         "address": function_address,
                         "return_type": RetType({
                             "name": "",
-                            "type": function.ret.name
+                            "type": function.ret.name.replace(
+                                "gd::",
+                                "std::"
+                            )
                         }),
                         "parameters": BIUtils.from_pybroma_args(
                             function.args
@@ -491,21 +596,21 @@ class BromaImporter:
                 if ida_ea == -0x1:
                     continue
 
-                if self._has_mismatch(
+                if BIUtils.has_mismatch(
                     cast(
                         ida_func_type_data_t,
                         BIUtils.get_function_info(ida_ea)
                         ), binding
                     ):
-                    SetType(ida_ea, self._get_function_signature(binding))
+                    BIUtils.set_function_signature(ida_ea, binding)
 
             return
 
         # first, handle non-duplicates
         for binding in self.bindings:
-            ida_ea = get_imagebase() + binding["address"]
-            ida_name = get_ea_name(ida_ea)
-            ida_func_flags = get_func_flags(ida_ea)
+            ida_ea: int = get_imagebase() + binding["address"]
+            ida_name: str = get_ea_name(ida_ea)
+            ida_func_flags: int = get_func_flags(ida_ea)
 
             if ida_name.startswith("loc_"):
                 add_func(ida_ea)
@@ -525,12 +630,12 @@ class BromaImporter:
                 continue
 
             if self._has_types and \
-                self._has_mismatch(cast(
+                BIUtils.has_mismatch(cast(
                     ida_func_type_data_t,
                     BIUtils.get_function_info(ida_ea)
                     ), binding
                 ):
-                SetType(ida_ea, self._get_function_signature(binding))
+                BIUtils.set_function_signature(ida_ea, binding)
 
             if ida_name.startswith("sub_"):
                 rename_func(

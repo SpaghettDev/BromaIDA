@@ -103,7 +103,7 @@ class BromaExporter:
                 broma_line_no_address.string[
                     broma_line_no_address.span(0)[0]:
                 ][2:]
-            }"""
+            };"""
 
         broma_binding_platforms = self._parse_method_platforms(
             parsed_broma_line.group(5)

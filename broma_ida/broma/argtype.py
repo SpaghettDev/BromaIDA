@@ -37,30 +37,32 @@ class ArgType:
     """An argument type"""
     btype: BaseArgType
 
-    def _expand_stl_type(self, t: str) -> str:
+    def _expand_stl_type(self, stl_type: str) -> str:
         """Expands STL types because IDA is retarded and likes to expand them
 
         Args:
-            t (str): _description_
+            stl_type (str)
 
         Returns:
-            str: _description_
+            str
         """
         # IDA likes spaces after types
-        format_pointer = lambda pt: sub(r"([^ ])\*", r"\1 *", pt)  # noqa: E731
+        format_pointer = lambda pt: sub(
+            r"([^ ])\*", r"\1 *", pt
+        )  # noqa: E731
 
-        if "std::" not in t:
-            return t
+        if "std::" not in stl_type:
+            return stl_type
 
         if sub(
-            "(?: )?const(?: )?", "", t
-                ).removesuffix("&").removesuffix("*") == "std::string":
-            return t
+            "(?: )?const(?: )?", "", stl_type
+        ).removesuffix("&").removesuffix("*") == "std::string":
+            return stl_type
 
-        if t.startswith("std::vector"):
-            split_type = match(r"std::vector<(.*)>", t)
+        if stl_type.startswith("std::vector"):
+            split_type = match(r"std::vector<(.*)>", stl_type)
 
-            assert split_type is not None, "impossible"
+            assert split_type is not None, f"Couldn't get contained type for '{stl_type}'"
 
             if split_type.group(1) in EXPANDED_STL_TYPES:
                 return format_pointer(f"""std::vector{
@@ -72,12 +74,12 @@ class ArgType:
 
             # this should never happen, but it causes the below code
             # to go ham
-            if "std::allocator" in t:
-                return t
+            if "std::allocator" in stl_type:
+                return stl_type
 
             # "it just works"
             # credit to henrysck075 i couldnt figure out this shit :D
-            ret = t
+            ret = stl_type
             vec_to_contained = [[ret, ret]]
             while True:
                 try:
@@ -110,8 +112,11 @@ class ArgType:
 
             return format_pointer(vec_to_contained[0][1])
 
-        if t.startswith("std::map"):
-            split_type = split(r"std::map<(.*), (.*)>", t)
+        if stl_type.startswith("std::map"):
+            split_type = split(r"std::map<(.*),(?: )?(.*)>", stl_type)
+
+            assert split_type is not None, f"Couldn't get contained types for '{stl_type}'"
+
             map_key_type = ""
             map_value_type = ""
 
@@ -164,8 +169,11 @@ class ArgType:
                 "{1}", map_value_type
             ))
 
-        if t.startswith("std::unordered_map"):
-            split_type = split(r"std::unordered_map<(.*), (.*)>", t)
+        if stl_type.startswith("std::unordered_map"):
+            split_type = split(r"std::unordered_map<(.*),(?: )?(.*)>", stl_type)
+
+            assert split_type is not None, f"Couldn't get contained types for {stl_type}"
+
             map_key_type = ""
             map_value_type = ""
 
@@ -217,10 +225,10 @@ class ArgType:
                 "{1}", map_value_type
             ))
 
-        if t.startswith("std::set"):
-            contained = match("std::set<(.*)>", t)
+        if stl_type.startswith("std::set"):
+            contained = match("std::set<(.*)>", stl_type)
 
-            assert contained is not None, "impossible"
+            assert contained is not None, f"Couldn't get contained type for {stl_type}"
 
             return format_pointer(f"""std::set{
                 BASE_EXPANDED_STL_TYPES["std::set"]
@@ -228,10 +236,10 @@ class ArgType:
                 "{}", contained.group(1)
             ))
 
-        if t.startswith("std::unordered_set"):
-            contained = match("std::unordered_set<(.*)>", t)
+        if stl_type.startswith("std::unordered_set"):
+            contained = match("std::unordered_set<(.*)>", stl_type)
 
-            assert contained is not None, "impossible"
+            assert contained is not None, f"Couldn't get contained type for {stl_type}"
 
             return format_pointer(f"""std::unordered_set{
                 BASE_EXPANDED_STL_TYPES["std::unordered_set"]
@@ -239,7 +247,7 @@ class ArgType:
                 "{}", contained.group(1)
             ))
 
-        raise BaseException(f"[!] Couldn't expand STL type: '{t}'")
+        raise BaseException(f"[!] Couldn't expand STL type: '{stl_type}'")
 
     def __init__(self, btype: Union[BaseArgType, BaseShortArgType]):
         if btype.get("reg"):
