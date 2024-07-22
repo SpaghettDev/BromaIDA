@@ -274,6 +274,13 @@ class BIUtils:
 
         function_data = BIUtils.get_function_info(ea)
 
+        if function_data is None:
+            print(
+                "Couldn't fix STL parameters for "
+                f"""function {binding["qualified_name"]}!"""
+            )
+            return
+
         for idx in arg_stl_idx:
             stl_type = ida_tinfo_t()
             stl_type.get_named_type(
@@ -283,7 +290,8 @@ class BIUtils:
                 False
             )
 
-            if binding["parameters"][idx]["type"].endswith("&") or binding["parameters"][idx]["type"].endswith("*"):
+            if binding["parameters"][idx]["type"].endswith("&") or \
+                    binding["parameters"][idx]["type"].endswith("*"):
                 stl_type_ptr = ida_tinfo_t()
                 stl_type_ptr.create_ptr(stl_type)
 
@@ -292,7 +300,9 @@ class BIUtils:
             if "const" in binding["parameters"][idx]["type"]:
                 stl_type.set_const()
 
-            function_data[idx + (0 if binding["is_static"] else 1)].type = stl_type
+            function_data[
+                idx + (0 if binding["is_static"] else 1)
+            ].type = stl_type
 
         if ret_has_stl_type:
             stl_type = ida_tinfo_t()
@@ -303,7 +313,8 @@ class BIUtils:
                 False
             )
 
-            if binding["return_type"]["type"].endswith("&") or binding["return_type"]["type"].endswith("*"):
+            if binding["return_type"]["type"].endswith("&") or \
+                    binding["return_type"]["type"].endswith("*"):
                 stl_type_ptr = ida_tinfo_t()
                 stl_type_ptr.create_ptr(stl_type)
 
@@ -345,7 +356,8 @@ class BromaImporter:
         if plugin_path is None:
             popup(
                 "Ok", "Ok", None,
-                "This shouldn't happen... Couldn't find plugin folder, please make an issue in the repository!"
+                "This shouldn't happen... Couldn't find plugin folder, "
+                "please make an issue in the repository!"
             )
             return False
 
@@ -408,7 +420,8 @@ class BromaImporter:
                     SRCLANG_CPP,
                     None,
                     (
-                        get_ida_plugin_path() / "broma_ida" / "types" / "codegen" / f"{self._target_platform}.hpp"  # type: ignore
+                        get_ida_plugin_path() / "broma_ida" / "types" / "codegen" /
+                        f"{self._target_platform}.hpp"  # type: ignore
                     ).as_posix(),
                     True
                 )

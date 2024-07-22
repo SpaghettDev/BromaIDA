@@ -113,7 +113,7 @@ class ArgType:
             return format_pointer(vec_to_contained[0][1])
 
         if stl_type.startswith("std::map"):
-            split_type = split(r"std::map<(.*),(?: )?(.*)>", stl_type)
+            split_type = split(r"std::map<(.*),\s*(.*)>", stl_type)
 
             assert split_type is not None, f"Couldn't get contained types for '{stl_type}'"
 
@@ -170,7 +170,7 @@ class ArgType:
             ))
 
         if stl_type.startswith("std::unordered_map"):
-            split_type = split(r"std::unordered_map<(.*),(?: )?(.*)>", stl_type)
+            split_type = split(r"std::unordered_map<(.*),\s*(.*)>", stl_type)
 
             assert split_type is not None, f"Couldn't get contained types for {stl_type}"
 
