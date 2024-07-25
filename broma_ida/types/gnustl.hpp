@@ -2,8 +2,8 @@
 
 #if defined(BROMAIDA_PLATFORM_ANDROID32) || defined(BROMAIDA_PLATFORM_ANDROID64)
 
-#include <functional>
 #include <cstdint>
+#include <cstddef>
 
 using va_list = char*;
 
@@ -62,6 +62,7 @@ namespace std
 
 		const char* c_str() const;
 		std::size_t size();
+
 	private:
 		stl::StringData m_data;
 		// friend stl::StringImpl;
@@ -73,6 +74,7 @@ namespace std
 		void assign(const T*, const T*) {}
 		T& front() { return *m_start; }
 		std::size_t size() { return m_finish - m_start; }
+
 	protected:
 		T* m_start;
 		T* m_finish;
@@ -90,7 +92,9 @@ namespace std
 	template <typename K, typename V>
 	class map {
 	protected:
-		std::less<K> compare;
+		// std::less is 1 byte, but idaclang thinks its 0????
+		// std::less<K> compare;
+		bool compare;
 		stl::_rb_tree_base m_header;
 		std::size_t m_nodecount;
 	};

@@ -129,6 +129,49 @@ class BIUtils:
             return True
 
         return False
+
+    @staticmethod
+    def verify_types(platform: BROMA_PLATFORMS) -> bool:
+        """Verifies the existance and size of types
+
+        Returns:
+            bool
+        """
+        holy_shit_struct = BIUtils.get_type_info("holy_shit")
+
+        if holy_shit_struct:
+            if holy_shit_struct.get_size() != \
+                BIUtils.get_holy_shit_struct_size(platform):
+                popup(
+                    "Ok", "Ok", None,
+                    "Mismatch in STL types! "
+                    "Function types will not be changed! "
+                    "To fix this, go to the local types window "
+                    "and delete all Cocos and GD types "
+                    "(as well as holy_shit struct)"
+                )
+                return False
+        else:
+            return True
+
+        if any([
+            BIUtils.verify_type(BIUtils.get_type_info(t))
+            for t in (
+                "cocos2d::CCObject", "cocos2d::CCImage",
+                "cocos2d::CCApplication", "cocos2d::CCDirector"
+            )
+        ]):
+            popup(
+                "Ok", "Ok", None,
+                "Mismatch in cocos2d types! "
+                "Function types will not be changed! "
+                "To fix this, go to the local types window "
+                "and delete all Cocos and GD types "
+                "(as well as holy_shit struct)"
+            )
+            return False
+
+        return True
     
     @staticmethod
     def get_holy_shit_struct_size(platform: BROMA_PLATFORMS) -> int:
@@ -146,11 +189,31 @@ class BIUtils:
             "imac": 0x1,  # need them headers
             "m1": 0x1,
             "ios": 0x1,  # this probably will never exist
-            "android32": 0x45C,
-            "android64": 0x828
+            "android32": 0x490,
+            "android64": 0x920
         }
 
         return plat_to_hss_size[platform]
+
+    def get_parser_argv(platform: BROMA_PLATFORMS) -> str:
+        """Gets the parser arguments for a certain platform
+
+        Args:
+            platform (BROMA_PLATFORMS)
+
+        Returns:
+            str
+        """
+        plat_to_parser_argv: dict[BROMA_PLATFORMS, str] = {
+            "win": "-x c++ -target x86_64-pc-win32",
+            "imac": "-x c++ -target x86_64-apple-darwin",
+            "m1": "-x c++ -target arm64-apple-darwin",
+            "ios": "",  # idfk
+            "android32": "-x c++ -target arm64-pc-linux -mfloat-abi=hard",
+            "android64": "-x c++ -target arm-pc-linux -mfloat-abi=hard"
+        }
+
+        return plat_to_parser_argv[platform]
 
     # Signature stuff
 
@@ -186,6 +249,7 @@ class BIUtils:
 
         return False
 
+    @staticmethod
     def get_ida_args_str(binding: Binding) -> str:
         """Gets a function's argument string.
 
@@ -206,6 +270,7 @@ class BIUtils:
             str(arg) for arg in binding["parameters"]
         ])
 
+    @staticmethod
     def get_function_signature(binding: Binding) -> str:
         """Returns a C++ function signature for the given function.
 
@@ -396,17 +461,16 @@ class BromaImporter:
         if g_has_idaclang and popup(
             "Yes", "No", None, "Import classes from Broma?"
         ) == ASKBTN_BTN1:
-            if self._codegen_classes(root.classesAsDict()):
-                if self._target_platform == "win":
-                    set_parser_argv("clang", "-x c++ -target x86_64-pc-win32")
-                elif self._target_platform == "imac":
-                    set_parser_argv("clang", "-x c++ -target x86_64-apple-darwin")
-                elif self._target_platform == "m1":
-                    set_parser_argv("clang", "-x c++ -target arm64-apple-darwin")
-                elif self._target_platform == "android32":
-                    set_parser_argv("clang", "-x c++ -target arm64-pc-linux -mfloat-abi=hard")
-                elif self._target_platform == "android64":
-                    set_parser_argv("clang", "-x c++ -target arm-pc-linux -mfloat-abi=hard")
+            if BIUtils.verify_types(self._target_platform) and \
+                    self._codegen_classes(root.classesAsDict()):
+                if popup(
+                    "Yes", "No", None,
+                    "Set default compiler arguments? (Recommended)"
+                ) == ASKBTN_BTN1:
+                    set_parser_argv(
+                        "clang",
+                        BIUtils.get_parser_argv(self._target_platform)
+                    )
 
                 popup(
                     "Ok", "Ok", None,
@@ -420,7 +484,8 @@ class BromaImporter:
                     SRCLANG_CPP,
                     None,
                     (
-                        get_ida_plugin_path() / "broma_ida" / "types" / "codegen" /
+                        get_ida_plugin_path() /
+                        "broma_ida" / "types" / "codegen" /
                         f"{self._target_platform}.hpp"  # type: ignore
                     ).as_posix(),
                     True
@@ -428,39 +493,7 @@ class BromaImporter:
 
                 self._has_types = True
             else:
-                holy_shit_struct = BIUtils.get_type_info("holy_shit")
-
-                if holy_shit_struct:
-                    self._has_types = holy_shit_struct.get_size() == \
-                        BIUtils.get_holy_shit_struct_size(self._target_platform)
-
-                    if not self._has_types:
-                        popup(
-                            "Ok", "Ok", None,
-                            "Mismatch in STL types! "
-                            "Function types will not be changed! "
-                            "To fix this, go to the local types window "
-                            "and delete all Cocos and GD types "
-                            "(as well as holy_shit struct)"
-                        )
-
-                if any([
-                    BIUtils.verify_type(BIUtils.get_type_info(t))
-                    for t in (
-                        "cocos2d::CCObject", "cocos2d::CCImage",
-                        "cocos2d::CCApplication", "cocos2d::CCDirector"
-                    )
-                ]):
-                    self._has_types = False
-
-                    popup(
-                        "Ok", "Ok", None,
-                        "Mismatch in cocos2d types! "
-                        "Function types will not be changed! "
-                        "To fix this, go to the local types window "
-                        "and delete all Cocos and GD types "
-                        "(as well as holy_shit struct)"
-                    )
+                self._has_types = False
 
         if self._target_platform.startswith("android"):
             for class_name, broma_class in root.classesAsDict().items():
@@ -489,7 +522,6 @@ class BromaImporter:
                         "is_virtual": function.is_virtual,
                         "is_static": function.is_static
                     }))
-
         else:
             for class_name, broma_class in root.classesAsDict().items():
                 for field in broma_class.fields:

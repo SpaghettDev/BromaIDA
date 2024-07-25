@@ -165,9 +165,9 @@ def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
     """
     platform_to_printable = {
         "win": "Windows",
-        "ios": "iOS",
         "imac": "Intel MacOS",  # MacchewOS my beloved
         "m1": "M1 MacOS",
+        "ios": "iOS",
         "android32": "Android 32 bit",
         "android64": "Android 64 bit"
     }

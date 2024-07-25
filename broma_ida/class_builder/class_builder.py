@@ -9,7 +9,7 @@ class ClassBuilder:
     _broma_class: Class
     _target_platform: BROMA_PLATFORMS
 
-    def _import_class(self):
+    def _import_class(self) -> None:
         """Converts a Binding to a class string"""
         self._class_str = f"class {self._broma_class.name}"
 
@@ -27,11 +27,9 @@ class ClassBuilder:
             member_field = field.getAsMemberField()
             pad_field = field.getAsPadField()
 
-            if func_field is not None and \
-                    func_field.prototype.is_virtual:
-                has_left_functions = False
-
+            if func_field is not None and func_field.prototype.is_virtual:
                 function = func_field.prototype
+
                 self._class_str += f"""\tvirtual {
                     function.ret.name.replace("gd::", "std::")
                 } {function.name}({", ".join([
@@ -54,10 +52,17 @@ class ClassBuilder:
                 } {member_field.name};\n"""
             elif pad_field is not None:
                 # skip other members because no padding for current platform
-                if self._target_platform not in pad_field.amount.platforms_as_dict():
+                if self._target_platform not in \
+                        pad_field.amount.platforms_as_dict():
                     break
 
-                pad_amount = pad_field.amount.platforms_as_dict()[self._target_platform]
+                pad_amount = pad_field.amount.platforms_as_dict()[
+                    self._target_platform
+                ]
+
+                # thank you andy pads
+                if pad_amount == 0:
+                    continue
 
                 if has_left_functions:
                     self._class_str += "\n"
