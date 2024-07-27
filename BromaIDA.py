@@ -13,8 +13,6 @@ from idaapi import (
 from ida_kernwin import ask_file, ASKBTN_BTN1, ASKBTN_BTN2
 from idautils import Names
 
-from broma_ida.pybroma_installer import install_pybroma
-
 from broma_ida.utils import (
     popup, stop, get_platform, get_platform_printable
 )
@@ -103,15 +101,6 @@ class BromaIDAPlugin(ida_plugin_t):
     def init(self):
         """Ran on plugin load"""
         self._register_action()
-
-        if not install_pybroma():
-            popup(
-                "Ok", "Ok", None,
-                "Couldn't install PyBroma! "
-                "Please open a GitHub issue to resolve this."
-            )
-            stop()
-
         ida_msg(f"{self.wanted_name} v{VERSION} initialized\n")
 
         return PLUGIN_KEEP

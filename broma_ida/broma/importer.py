@@ -209,8 +209,8 @@ class BIUtils:
             "imac": "-x c++ -target x86_64-apple-darwin",
             "m1": "-x c++ -target arm64-apple-darwin",
             "ios": "",  # idfk
-            "android32": "-x c++ -target arm64-pc-linux -mfloat-abi=hard",
-            "android64": "-x c++ -target arm-pc-linux -mfloat-abi=hard"
+            "android32": "-x c++ -target armv7-none-linux-androideabi -mfloat-abi=hard",
+            "android64": "-x c++ -target aarch64-none-linux-android -mfloat-abi=hard"
         }
 
         return plat_to_parser_argv[platform]
