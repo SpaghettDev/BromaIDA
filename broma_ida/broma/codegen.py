@@ -12,6 +12,7 @@ class BromaCodegen:
 #include <array>
 
 #define BROMAIDA_PLATFORM_MACRO_NAME
+#define BROMAIDA_USE_CUSTOM_GNUSTL_MACRO
 
 #define STR_CONCAT_WRAPPER(a, b) a ## b
 #define STR_CONCAT(a, b) STR_CONCAT_WRAPPER(a, b)
@@ -20,6 +21,7 @@ class BromaCodegen:
     _classes: dict[str, Class]
     _path: Path
     _target_platform: BROMA_PLATFORMS
+    _use_custom_gnustl: bool = True
     _broma_path: Path
 
     _added_classes: set[str] = set()
@@ -27,11 +29,13 @@ class BromaCodegen:
     def __init__(
         self,
         platform: BROMA_PLATFORMS,
+        use_custom_gnustl: bool,
         broma_classes: dict[str, Class],
         path: Path,
         broma_path: Path
     ):
         self._target_platform = platform
+        self._use_custom_gnustl = use_custom_gnustl
         self._classes = broma_classes
         self._path = path
         self._broma_path = broma_path
@@ -54,6 +58,10 @@ class BromaCodegen:
                 self.FILE_HEADER.replace(
                     "BROMAIDA_PLATFORM_MACRO_NAME",
                     self._get_bromaida_platform_macro()
+                ).replace(
+                    "BROMAIDA_USE_CUSTOM_GNUSTL_MACRO",
+                    "BROMAIDA_USE_CUSTOM_GNUSTL" if self._use_custom_gnustl \
+                        else "BROMAIDA_DONT_USE_CUSTOM_GNUSTL"
                 )
             )
 
@@ -102,7 +110,7 @@ class BromaCodegen:
             f.write("// Broma\n\n")
 
             f.write("// typdefs\n")
-            f.write("using TodoReturn = void; // :troll:\n")
+            f.write("enum class TodoReturn {}; // :troll:\n")
             f.write("\n")
 
             f.flush()

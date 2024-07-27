@@ -1,6 +1,6 @@
 // taken from: https://github.com/geode-sdk/geode/blob/main/loader/include/Geode/c++stl/string.hpp
 
-#if defined(BROMAIDA_PLATFORM_ANDROID32) || defined(BROMAIDA_PLATFORM_ANDROID64)
+#if !defined(BROMAIDA_DONT_USE_CUSTOM_GNUSTL) && (defined(BROMAIDA_PLATFORM_ANDROID32) || defined(BROMAIDA_PLATFORM_ANDROID64))
 
 #include <cstdint>
 #include <cstddef>

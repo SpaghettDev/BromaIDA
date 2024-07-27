@@ -1,6 +1,10 @@
 #include <utility>
 
-#if !defined(BROMAIDA_PLATFORM_ANDROID32) && !defined(BROMAIDA_PLATFORM_ANDROID64)
+#if !defined(BROMAIDA_DONT_USE_CUSTOM_GNUSTL) && (defined(BROMAIDA_PLATFORM_ANDROID32) || defined(BROMAIDA_PLATFORM_ANDROID64))
+
+#include "gnustl.hpp"
+
+#else
 
 #include <string>
 #include <vector>
@@ -8,10 +12,6 @@
 #include <unordered_map>
 #include <set>
 #include <unordered_set>
-
-#else
-
-#include "gnustl.hpp"
 
 #endif
 

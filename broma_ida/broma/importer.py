@@ -12,7 +12,7 @@ from idc import (
     FUNC_LIB
 )
 from ida_funcs import get_func, add_func
-from ida_kernwin import ASKBTN_BTN1, ASKBTN_CANCEL
+from ida_kernwin import ASKBTN_BTN1, ASKBTN_BTN2, ASKBTN_CANCEL
 from ida_typeinf import (
     get_idati, get_ordinal_qty,
     func_type_data_t as ida_func_type_data_t,
@@ -426,8 +426,18 @@ class BromaImporter:
             )
             return False
 
+        use_custom_gnustl = True
+        if self._target_platform.startswith("android"):
+            if popup(
+                "Yes", "No", None,
+                "Use custom GNU STL? "
+                "(Recommended if you're not using genuine android GCC headers)"
+            ) == ASKBTN_BTN2:
+                use_custom_gnustl = False
+
         BromaCodegen(
             self._target_platform,
+            use_custom_gnustl,
             classes,
             plugin_path / "broma_ida" / "types",
             Path("/".join(Path(self._file_path).parts[:-1]))
