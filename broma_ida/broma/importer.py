@@ -151,8 +151,6 @@ class BIUtils:
                     "(as well as holy_shit struct)"
                 )
                 return False
-        else:
-            return True
 
         if any([
             BIUtils.verify_type(BIUtils.get_type_info(t))

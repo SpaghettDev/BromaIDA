@@ -863,6 +863,12 @@ enum class LeaderboardState {
 	Friends = 4,
 };
 
+enum class GameOptionsSetting {
+    Off = -1,
+    Disabled = 0,
+    On = 1,
+};
+
 // Wylie Addition (https://github.com/Wyliemaster/GD-Decompiled/blob/main/GD/code/headers/Layers/LevelSettingsLayer.h)
 enum class Speed {
 	Normal = 0,
