@@ -1,6 +1,6 @@
 #include <utility>
 
-#if !defined(BROMAIDA_DONT_USE_CUSTOM_GNUSTL) && (defined(BROMAIDA_PLATFORM_ANDROID32) || defined(BROMAIDA_PLATFORM_ANDROID64))
+#if defined(BROMAIDA_PLATFORM_ANDROID32) || defined(BROMAIDA_PLATFORM_ANDROID64)
 
 #include "gnustl.hpp"
 
@@ -12,29 +12,6 @@
 #include <unordered_map>
 #include <set>
 #include <unordered_set>
-
-#if defined(BROMAIDA_PLATFORM_ANDROID32) || defined(BROMAIDA_PLATFORM_ANDROID64)
-
-// idaclang thinks empty classes occupy 0 bytes of space therefore breaking the
-// implementation of std::map/std::set (caused by the empty class std::less)
-template <typename T>
-struct custom_less : std::less<T>
-{
-    bool pad;
-};
-
-namespace std
-{
-    // providing custom specializations for standard library templates is
-    // technically UB but clang allows it
-    template <typename Key, typename T, typename Alloc>
-    class map<Key, T, less<Key>, Alloc> : public map<Key, T, custom_less<Key>, Alloc> {};
-
-    template <typename Key, typename Alloc>
-    class set<Key, less<Key>, Alloc> : public set<Key, custom_less<Key>, Alloc> {};
-}
-
-#endif
 
 #endif
 
