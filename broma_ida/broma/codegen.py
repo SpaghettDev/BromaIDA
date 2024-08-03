@@ -52,16 +52,17 @@ class BromaCodegen:
         with open(
             self._path / "codegen" / f"{self._target_platform}.hpp",
             "w",
-            buffering=10*1024*1024
+            buffering=10 * 1024 * 1024,
         ) as f:
             f.write(
                 self.FILE_HEADER.replace(
                     "BROMAIDA_PLATFORM_MACRO_NAME",
-                    self._get_bromaida_platform_macro()
+                    self._get_bromaida_platform_macro(),
                 ).replace(
                     "BROMAIDA_USE_CUSTOM_GNUSTL_MACRO",
-                    "BROMAIDA_USE_CUSTOM_GNUSTL" if self._use_custom_gnustl \
-                        else "BROMAIDA_DONT_USE_CUSTOM_GNUSTL"
+                    "BROMAIDA_USE_CUSTOM_GNUSTL"
+                    if self._use_custom_gnustl
+                    else "BROMAIDA_DONT_USE_CUSTOM_GNUSTL",
                 )
             )
 
@@ -79,7 +80,7 @@ class BromaCodegen:
             with open(self._path / "cocos2d.hpp") as cocos:
                 f.write("// cocos2d.hpp\n")
                 for line in cocos.readlines():
-                    if line.startswith("#include \""):
+                    if line.startswith('#include "'):
                         line = f"// {line}"
 
                     f.write(line)
@@ -88,15 +89,6 @@ class BromaCodegen:
             with open(self._path / "fmod.hpp") as fmod:
                 f.write("// fmod.hpp\n")
                 f.writelines(fmod.readlines())
-                f.write("\n\n")
-
-            with open(self._path / "stl_types.hpp") as stl_types:
-                f.write("// stl_types.hpp\n")
-                for line in stl_types.readlines():
-                    if line.startswith("#include \""):
-                        line = f"// {line}"
-
-                    f.write(line)
                 f.write("\n\n")
 
             with open(self._path / "helpers.hpp") as helpers:
@@ -121,9 +113,13 @@ class BromaCodegen:
                     split_c = c.split("::")
 
                     if len(split_c) == 2:
-                        f.write(f"""namespace {split_c[0]} {{ class {split_c[1]}; }};\n""")
+                        f.write(
+                            f"""namespace {split_c[0]} {{ class {split_c[1]}; }};\n"""
+                        )
                     elif len(split_c) == 3:
-                        f.write(f"""namespace {split_c[0]} {{ namespace {split_c[1]} {{ class {split_c[2]}; }} }}\n""")
+                        f.write(
+                            f"""namespace {split_c[0]} {{ namespace {split_c[1]} {{ class {split_c[2]}; }} }}\n"""
+                        )
                 else:
                     f.write(f"class {c};\n")
             f.write("\n")
@@ -131,9 +127,11 @@ class BromaCodegen:
             f.flush()
 
             f.write("// extras\n")
-            for name, broma_class in Root(
-                str(self._broma_path / "Extras.bro")
-            ).classesAsDict().items():
+            for name, broma_class in (
+                Root(str(self._broma_path / "Extras.bro"))
+                .classesAsDict()
+                .items()
+            ):
                 f.write(
                     ClassBuilder(self._target_platform, broma_class).get_str()
                 )
@@ -163,6 +161,15 @@ class BromaCodegen:
                 f.write(
                     ClassBuilder(self._target_platform, broma_class).get_str()
                 )
+            f.write("\n")
+            
+            with open(self._path / "stl_types.hpp") as stl_types:
+                f.write("// stl_types.hpp\n")
+                for line in stl_types.readlines():
+                    if line.startswith("#include \""):
+                        line = f"// {line}"
+
+                    f.write(line)
 
     def _get_bromaida_platform_macro(self) -> str:
         """Gets the BromaIDA platform macro name (shocker)"""
@@ -172,7 +179,7 @@ class BromaCodegen:
             "m1": "M1_MACOS",
             "ios": "IOS",
             "android32": "ANDROID32",
-            "android64": "ANDROID64"
+            "android64": "ANDROID64",
         }
 
         return f"""BROMAIDA_PLATFORM_{plat_to_macro_suffix[self._target_platform]}"""

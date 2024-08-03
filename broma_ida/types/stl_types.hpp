@@ -17,33 +17,9 @@
 
 #include "enums.hpp"
 
-namespace cocos2d
-{
-	class CCObject;
-	class CCArray;
-}
-
-class EnterEffectInstance;
-class EffectGameObject;
-class SFXTriggerState;
-class GameObject;
-class DynamicObjectAction;
-class SongTriggerState;
-class ChanceObject;
-class EnhancedGameObject;
-struct PlayerButtonCommand;
-class EventTriggerInstance;
-class AdvancedFollowInstance;
-struct KeyframeObject;
 struct SavedActiveObjectState;
 struct SavedSpecialObjectState;
 struct SavedObjectStateRef;
-struct SFXTriggerInstance;
-struct GameObjectEditorState;
-struct GJValueTween;
-struct SongChannelState;
-struct GJPointDouble;
-struct GameObjectPhysics;
 
 class holy_shit
 {

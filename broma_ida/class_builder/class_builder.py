@@ -51,10 +51,10 @@ class ClassBuilder:
                     ).replace("geode::", "")
                 } {member_field.name};\n"""
             elif pad_field is not None:
-                # skip other members because no padding for current platform
+                # this check fails even for 0 pads so it's safer to continue
                 if self._target_platform not in \
                         pad_field.amount.platforms_as_dict():
-                    break
+                    continue
 
                 pad_amount = pad_field.amount.platforms_as_dict()[
                     self._target_platform
