@@ -125,7 +125,7 @@ class BIUtils:
         if t is None:
             return True
 
-        if t.get_size() == 0xFFFFFFFFFFFFFFFF:
+        if t.get_size() == 0xFFFFFFFFFFFFFFFF or t.is_forward_decl():
             return True
 
         return False
@@ -152,7 +152,7 @@ class BIUtils:
                 )
                 return False
 
-        if any([
+        if not all([
             BIUtils.verify_type(BIUtils.get_type_info(t))
             for t in (
                 "cocos2d::CCObject", "cocos2d::CCImage",

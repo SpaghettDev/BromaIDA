@@ -19,8 +19,8 @@
 
 namespace cocos2d
 {
-	class CCObject;
-	class CCArray;
+        class CCObject;
+        class CCArray;
 }
 
 class EnterEffectInstance;

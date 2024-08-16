@@ -28,6 +28,24 @@ namespace std
 
     template <typename Key, typename Alloc>
     class set<Key, less<Key>, Alloc> : public set<Key, custom_less<Key>, Alloc> {};
+
+	// std::vector implementation of gnustl breaks idaclang (errors when determining
+	// the size in local types)
+	template <typename T>
+	class vector<T, allocator<T>>
+	{
+		T* _M_start;
+		T* _M_finish;
+		T* _M_end_of_storage;
+	};
+
+	template <>
+	class vector<bool, allocator<bool>>
+	{
+		_Bit_iterator _M_start;
+		_Bit_iterator _M_finish;
+		_Bit_type* _M_end_of_storage;
+	};
 }
 
 #else
