@@ -1,26 +1,10 @@
-#include <utility>
-
-#if defined(BROMAIDA_PLATFORM_ANDROID32) || defined(BROMAIDA_PLATFORM_ANDROID64)
-
-#include "gnustl.hpp"
-
-#else
-
-#include <string>
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <unordered_set>
-
-#endif
-
+#include "stl_includes.hpp"
 #include "enums.hpp"
 
 namespace cocos2d
 {
-        class CCObject;
-        class CCArray;
+	class CCObject;
+	class CCArray;
 }
 
 class EnterEffectInstance;
@@ -45,10 +29,11 @@ struct SongChannelState;
 struct GJPointDouble;
 struct GameObjectPhysics;
 
+// exists because IDA cant dynamically make STL types
 class holy_shit
 {
 public:
-    std::string m_str;
+	std::string m_str;
 
 	std::vector<std::string> m_m0;
 	std::vector<void*> m_m1;

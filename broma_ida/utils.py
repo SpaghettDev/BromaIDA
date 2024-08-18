@@ -1,22 +1,34 @@
-from typing import get_args, Union, NoReturn, Optional
+from typing import NoReturn, Optional
 
-from idaapi import (
-    get_imagebase, get_file_type_name,
-    BADADDR, SN_NOWARN
-)
-from ida_kernwin import ask_buttons, ask_str, ASKBTN_BTN1
+from idaapi import get_imagebase, get_inf_structure, BADADDR, SN_NOWARN
+from ida_kernwin import ask_buttons, ASKBTN_BTN1
 from ida_name import get_name_ea
-from idc import set_name
+from ida_diskio import idadir
+from ida_ida import f_PE, f_MACHO, f_ELF
+from ida_segment import get_first_seg
+from ida_bytes import get_dword, get_bytes
+from ida_segment import get_segm_by_sel
+from idc import set_name, selector_by_name
 
-from sys import path as sys_path
-from os import path as os_path
+from struct import unpack
 from pathlib import Path
 
 from broma_ida.broma.constants import BROMA_PLATFORMS
 from broma_ida.broma.binding import Binding
 
 
-g_platform: Optional[BROMA_PLATFORMS] = None
+# Mach-O Load commands
+MINIMUM_OS_VERSION_LOAD_COMMAND = 0x32
+
+# Mach-O CPU types
+CPU_TYPE_ARM64 = 0x0100000c
+CPU_TYPE_X86_64 = 0x01000007
+
+# Mach-O Platform types
+PLATFORM_TYPE_MACOS = 0x1
+PLATFORM_TYPE_IOS = 0x2
+
+g_platform: BROMA_PLATFORMS = None  # type: ignore
 
 
 def stop(reason: Optional[str] = None) -> NoReturn:
@@ -105,53 +117,88 @@ def get_short_info(binding: Binding) -> str:
     return f"""{binding["qualified_name"]} @ {hex(binding["address"])}"""
 
 
-def get_platform() -> Union[BROMA_PLATFORMS, NoReturn]:
-    """Tries to get the binary's platform
+# Internal
+def _get_minimum_mach_o_os_version() -> int:
+    """Gets the Minimum OS Version struct from the Mach-O header
+
     Returns:
-        BROMA_PLATFORMS | NoReturn: The platform or stop() called if
-            not able to be determined
+        int: -1 if it couldn't find MOSV load command
+    """
+    start = get_imagebase()
+    magic = get_dword(start)
+
+    if magic == 0xFEEDFACF:
+        header_size = 32  # 64-bit Mach-O header size
+    else:
+        header_size = 28  # 32-bit Mach-O header size
+
+    mach_header = get_bytes(start, header_size)
+    magic_number, cpu_type, cpu_subtype, file_type, \
+        ncmds, cmds_size, flags, reserved = unpack("<IIIIIIII", mach_header)
+
+    offset = start + header_size
+
+    for _ in range(ncmds):
+        cmd_header = get_bytes(offset, 8)
+        if not cmd_header or len(cmd_header) < 8:
+            break
+
+        cmd, cmdsize = unpack("<II", cmd_header)
+
+        if cmd == MINIMUM_OS_VERSION_LOAD_COMMAND:
+            minimum_os_version_struct = get_bytes(offset, 24)
+            commandtype, cmd_size, platform_type, min_os_ver, sdk_ver, \
+                num_tools = unpack("<IIIIII", minimum_os_version_struct)
+
+            return platform_type
+
+        offset += cmdsize
+
+    return -1
+
+def get_platform() -> BROMA_PLATFORMS:
+    """Gets the binary's platform
+    Returns:
+        BROMA_PLATFORMS
     """
     global g_platform
     if g_platform is not None:
         return g_platform
 
-    structure_info = get_file_type_name()
+    inf_structure = get_inf_structure()
+    file_type = inf_structure.filetype
 
-    if "PE" in structure_info:
+    if file_type == f_PE:
         g_platform = "win"
-        return "win"
-    elif structure_info.endswith("ARM64"):
-        g_platform = "m1"
-        return "m1"
-    elif structure_info.endswith("X86_64"):
-        g_platform = "imac"
-        return "imac"
-    elif structure_info.startswith("ELF for ARM"):
-        g_platform = "android32"
-        return "android32"
-    elif structure_info.startswith("ELF64 for ARM64"):
-        g_platform = "android64"
-        return "android64"
-
-    platform = ask_str(
-        "win",
-        256,
-        "Enter a platform (win, imac (intel mac), m1, "
-        "ios, android32 (Android 32 bit) or android64 (Android 64 bit))"
-    )
-
-    if platform not in get_args(BROMA_PLATFORMS):
-        popup(
-            "Ok", None, None,
-            f"""Invalid platform! ("{platform}" not in ("{
-                get_args(BROMA_PLATFORMS)
-            }\"))"""
+    elif file_type == f_MACHO:
+        cpu_type = get_dword(
+            get_segm_by_sel(selector_by_name("HEADER")).start_ea + 4
         )
-        stop()
 
-    g_platform = platform
+        if cpu_type == CPU_TYPE_ARM64:
+            platform_type = _get_minimum_mach_o_os_version()
 
-    return platform
+            if platform_type == PLATFORM_TYPE_IOS:
+                g_platform = "ios"
+            elif platform_type == PLATFORM_TYPE_MACOS:
+                g_platform = "m1"
+            else:
+                # appletv gd real
+                ...
+        elif cpu_type == CPU_TYPE_X86_64:
+            g_platform = "imac"
+    elif file_type == f_ELF:
+        bitness = get_first_seg().bitness
+
+        if bitness == 0x1:
+            g_platform = "android32"
+        elif bitness == 0x2:
+            g_platform = "android64"
+        elif bitness == 0x0:
+            # android 16bit real :troll:
+            ...
+
+    return g_platform
 
 
 def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
@@ -168,26 +215,17 @@ def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
         "imac": "Intel MacOS",  # MacchewOS my beloved
         "m1": "M1 MacOS",
         "ios": "iOS",
-        "android32": "Android 32 bit",
-        "android64": "Android 64 bit"
+        "android32": "Android (32 bit)",
+        "android64": "Android (64 bit)"
     }
 
     return platform_to_printable[platform]
 
 
-def get_ida_plugin_path() -> Optional[Path]:
-    """Gets the plugin path of the IDA folder using magic
-    (why isnt this exported by the idapython api)
+def get_ida_plugin_path() -> Path:
+    """Gets the plugin path of the IDA folder, no loger using magic :(
 
     Returns:
-        Optional[Path]: The plugin path as a Path,
-        or None if it couldn't be found
+        Path: The plugin path as a pathlib.Path
     """
-    paths = [path for path in sys_path if "plugins" in path]
-
-    if len(paths) == 0:
-        return None
-
-    return Path(
-        os_path.abspath(os_path.join(os_path.dirname(paths[0]), "plugins"))
-    )
+    return Path(idadir("plugins"))

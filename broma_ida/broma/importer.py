@@ -123,7 +123,7 @@ class BIUtils:
     @staticmethod
     def verify_type(t: Optional[ida_tinfo_t]) -> bool:
         if t is None:
-            return True
+            return False
 
         if t.get_size() == 0xFFFFFFFFFFFFFFFF or t.is_forward_decl():
             return True
@@ -145,26 +145,26 @@ class BIUtils:
                 popup(
                     "Ok", "Ok", None,
                     "Mismatch in STL types! "
-                    "Function types will not be changed! "
+                    "Classes will not be imported!\n"
                     "To fix this, go to the local types window "
-                    "and delete all Cocos and GD types "
+                    "and delete all Cocos and GD types\n"
                     "(as well as holy_shit struct)"
                 )
                 return False
 
-        if not all([
+        if any([
             BIUtils.verify_type(BIUtils.get_type_info(t))
             for t in (
-                "cocos2d::CCObject", "cocos2d::CCImage",
+                "cocos2d::CCObject", "cocos2d::CCNode", "cocos2d::CCImage",
                 "cocos2d::CCApplication", "cocos2d::CCDirector"
             )
         ]):
             popup(
                 "Ok", "Ok", None,
                 "Mismatch in cocos2d types! "
-                "Function types will not be changed! "
+                "Classes will not be imported!\n"
                 "To fix this, go to the local types window "
-                "and delete all Cocos and GD types "
+                "and delete all Cocos and GD types\n"
                 "(as well as holy_shit struct)"
             )
             return False
@@ -181,12 +181,11 @@ class BIUtils:
         Returns:
             int: size in bytes
         """
-        # TODO: yea wth update this!!
         plat_to_hss_size: dict[BROMA_PLATFORMS, int] = {
             "win": 0x808,
-            "imac": 0x1,  # need them headers
-            "m1": 0x1,
-            "ios": 0x1,  # this probably will never exist
+            "imac": 0x6A0,
+            "m1": 0x6A0,
+            "ios": 0x6A0,
             "android32": 0x490,
             "android64": 0x920
         }
@@ -206,9 +205,11 @@ class BIUtils:
             "win": "-x c++ -target x86_64-pc-win32",
             "imac": "-x c++ -target x86_64-apple-darwin",
             "m1": "-x c++ -target arm64-apple-darwin",
-            "ios": "",  # idfk
-            "android32": "-x c++ -target armv7-none-linux-androideabi -mfloat-abi=hard",
-            "android64": "-x c++ -target aarch64-none-linux-android -mfloat-abi=hard"
+            "ios": "-x c++ -target arm64-apple-darwin",
+            "android32":
+                "-x c++ -target armv7-none-linux-androideabi -mfloat-abi=hard",
+            "android64":
+                "-x c++ -target aarch64-none-linux-android -mfloat-abi=hard"
         }
 
         return plat_to_parser_argv[platform]
@@ -424,14 +425,15 @@ class BromaImporter:
             )
             return False
 
-        use_custom_gnustl = True
-        if self._target_platform.startswith("android"):
+        use_custom_gnustl = False
+        if self._target_platform != "win":
             if popup(
                 "Yes", "No", None,
-                "Use custom GNU STL? "
-                "(Recommended if you're not using genuine android GCC headers)"
-            ) == ASKBTN_BTN2:
-                use_custom_gnustl = False
+                "Use custom GNU STL?\n"
+                "(Chose No ONLY if you're using genuine GCC headers)",
+                1
+            ) == ASKBTN_BTN1:
+                use_custom_gnustl = True
 
         BromaCodegen(
             self._target_platform,

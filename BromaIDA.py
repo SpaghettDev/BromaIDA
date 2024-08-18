@@ -1,4 +1,4 @@
-VERSION = "5.6.0"
+VERSION = "5.7.0"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"
@@ -26,11 +26,10 @@ def bida_main():
     import_export_prompt = popup(
         "Import", "Export", "",
         "Import or Export Broma file?\n"
-        "(Please make sure Extras.bro is in the same directory)"
     )
 
     if import_export_prompt == ASKBTN_BTN1:
-        filePath = ask_file(False, "GeometryDash.bro", "bro")
+        filePath: str = ask_file(False, "GeometryDash.bro", "bro")
 
         if filePath is None or (filePath and not filePath.endswith(".bro")):
             popup("Ok", "Ok", None, "Please select a valid file!")
@@ -101,7 +100,7 @@ class BromaIDAPlugin(ida_plugin_t):
     def init(self):
         """Ran on plugin load"""
         self._register_action()
-        ida_msg(f"{self.wanted_name} v{VERSION} initialized\n")
+        ida_msg(f"{PLUGIN_NAME} v{VERSION} initialized\n")
 
         return PLUGIN_KEEP
 
@@ -109,7 +108,7 @@ class BromaIDAPlugin(ida_plugin_t):
         """Ran on plugin unload"""
         self._unregister_action()
 
-        ida_msg(f"{self.wanted_name} v{VERSION} unloaded\n")
+        ida_msg(f"{PLUGIN_NAME} v{VERSION} unloaded\n")
 
     def run(self, arg):
         """Ran on "File -> Script File" (shocker) (broken for me :D)"""

@@ -864,9 +864,9 @@ enum class LeaderboardState {
 };
 
 enum class GameOptionsSetting {
-    Off = -1,
-    Disabled = 0,
-    On = 1,
+	Off = -1,
+	Disabled = 0,
+	On = 1,
 };
 
 // Wylie Addition (https://github.com/Wyliemaster/GD-Decompiled/blob/main/GD/code/headers/Layers/LevelSettingsLayer.h)
