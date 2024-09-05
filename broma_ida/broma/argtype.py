@@ -1,4 +1,4 @@
-from typing import cast, overload, Union, Optional, TypedDict, Literal
+from typing import overload, TypedDict, Literal, NotRequired
 
 from re import split, match, sub
 
@@ -7,13 +7,7 @@ class BaseArgType(TypedDict):
     """A type. Has a register, a name and an actual type."""
     name: str
     type: str
-    reg: Optional[str]
-
-
-class BaseShortArgType(TypedDict):
-    """A type. Has an (optional) register, a name and an actual type."""
-    name: str
-    type: str
+    reg: NotRequired[str]
 
 
 BASE_EXPANDED_STL_TYPES = {
@@ -46,30 +40,33 @@ class ArgType:
         Returns:
             str
         """
-        # IDA likes spaces after types
-        format_pointer = lambda pt: sub(
+        # IDA is east pointer (ew)
+        format_pointer = lambda pt: sub(  # noqa: E731
             r"([^ ])\*", r"\1 *", pt
-        )  # noqa: E731
+        )
 
-        if "std::" not in stl_type:
-            return stl_type
-
-        if sub(
-            "(?: )?const(?: )?", "", stl_type
-        ).removesuffix("&").removesuffix("*") == "std::string":
+        if (
+            sub(
+                r"(?:\s*)?const(?:\s*)?", "", stl_type
+            )
+                .removesuffix("&")
+                .removesuffix("*")
+                .lstrip().rstrip()
+        ) == "std::string":
             return stl_type
 
         if stl_type.startswith("std::vector"):
             split_type = match(r"std::vector<(.*)>", stl_type)
 
-            assert split_type is not None, f"Couldn't get contained type for '{stl_type}'"
+            assert split_type is not None, \
+                f"Couldn't get contained type for '{stl_type}'"
 
             if split_type.group(1) in EXPANDED_STL_TYPES:
                 return format_pointer(f"""std::vector{
                     BASE_EXPANDED_STL_TYPES["std::vector"]
                 }""".replace(
                     "{}",
-                    EXPANDED_STL_TYPES[split_type.group(1)]  # type: ignore
+                    EXPANDED_STL_TYPES[split_type.group(1)]
                 ))
 
             # this should never happen, but it causes the below code
@@ -83,21 +80,23 @@ class ArgType:
             vec_to_contained = [[ret, ret]]
             while True:
                 try:
-                    ret = match(r"std::vector<(.+)>", ret)
+                    ret = match(
+                        r"std::vector<(.+)>", ret
+                    )  # type: ignore[assignment]
 
                     if ret is None:
                         break
 
-                    ret = ret.group(1)
+                    ret = ret.group(1)  # type: ignore[attr-defined]
                 except IndexError:
                     break
                 vec_to_contained.append([ret, ret])
 
-            split_type = vec_to_contained[-1][0]
+            split_type = vec_to_contained[-1][0]  # type: ignore[assignment]
             vec_to_contained[-2][1] = vec_to_contained[-2][1].replace(
                 f"<{split_type}>",
                 BASE_EXPANDED_STL_TYPES["std::vector"].replace(
-                    "{}", split_type
+                    "{}", split_type  # type: ignore[arg-type]
                 )
             )
 
@@ -113,29 +112,32 @@ class ArgType:
             return format_pointer(vec_to_contained[0][1])
 
         if stl_type.startswith("std::map"):
-            split_type = split(r"std::map<(.*),\s*(.*)>", stl_type)
+            split_type = split(
+                r"std::map<(.*),\s*(.*)>", stl_type
+            )  # type: ignore[assignment]
 
-            assert split_type is not None, f"Couldn't get contained types for '{stl_type}'"
+            assert split_type is not None, \
+                f"Couldn't get contained types for '{stl_type}'"
 
             map_key_type = ""
-            map_value_type = ""
+            map_val_type = ""
 
             # key or value is an STL type that has 2 template args
             if "," in split_type[1] and split_type[2].endswith(">"):
                 map_key_type = split_type[1][:split_type[1].index(" ") - 1]
-                map_value_type = f"""{
+                map_val_type = f"""{
                     split_type[1][split_type[1].index(" ") + 1:]
                 }, {
                     split_type[2]
                 }"""
             else:
                 map_key_type = split_type[1]
-                map_value_type = split_type[2]
+                map_val_type = split_type[2]
 
             if map_key_type in EXPANDED_STL_TYPES or \
-                    map_value_type in EXPANDED_STL_TYPES:
+                    map_val_type in EXPANDED_STL_TYPES:
                 key_is_stl = map_key_type in EXPANDED_STL_TYPES
-                value_is_stl = map_value_type in EXPANDED_STL_TYPES
+                val_is_stl = map_val_type in EXPANDED_STL_TYPES
 
                 return format_pointer(f"""std::map{
                     BASE_EXPANDED_STL_TYPES["std::map"]
@@ -145,20 +147,20 @@ class ArgType:
                     if key_is_stl else map_key_type
                 ).replace(
                     "{1}",
-                    EXPANDED_STL_TYPES[map_value_type]
-                    if value_is_stl else map_value_type
+                    EXPANDED_STL_TYPES[map_val_type]
+                    if val_is_stl else map_val_type
                 ))
 
             # std::map is never used as key
             if any([
-                x in map_value_type for x in BASE_EXPANDED_STL_TYPES.keys()
+                x in map_val_type for x in BASE_EXPANDED_STL_TYPES.keys()
             ]):
                 return format_pointer(f"""std::map{
                     BASE_EXPANDED_STL_TYPES["std::map"]
                 }""".replace(
                     "{0}", map_key_type
                 ).replace(
-                    "{1}", self._expand_stl_type(map_value_type)
+                    "{1}", self._expand_stl_type(map_val_type)
                 ))
 
             return format_pointer(f"""std::map{
@@ -166,32 +168,35 @@ class ArgType:
             }""".replace(
                 "{0}", map_key_type
             ).replace(
-                "{1}", map_value_type
+                "{1}", map_val_type
             ))
 
         if stl_type.startswith("std::unordered_map"):
-            split_type = split(r"std::unordered_map<(.*),\s*(.*)>", stl_type)
+            split_type = split(
+                r"std::unordered_map<(.*),\s*(.*)>", stl_type
+            )  # type: ignore[assignment]
 
-            assert split_type is not None, f"Couldn't get contained types for {stl_type}"
+            assert split_type is not None, \
+                f"Couldn't get contained types for {stl_type}"
 
             map_key_type = ""
-            map_value_type = ""
+            map_val_type = ""
 
             if "," in split_type[1] and split_type[2].endswith(">"):
                 map_key_type = split_type[1][:split_type[1].index(" ") - 1]
-                map_value_type = f"""{
+                map_val_type = f"""{
                     split_type[1][split_type[1].index(" ") + 1:]
                 }, {
                     split_type[2]
                 }"""
             else:
                 map_key_type = split_type[1]
-                map_value_type = split_type[2]
+                map_val_type = split_type[2]
 
             if map_key_type in EXPANDED_STL_TYPES or \
-                    map_value_type in EXPANDED_STL_TYPES:
+                    map_val_type in EXPANDED_STL_TYPES:
                 key_is_stl = map_key_type in EXPANDED_STL_TYPES
-                value_is_stl = map_value_type in EXPANDED_STL_TYPES
+                val_is_stl = map_val_type in EXPANDED_STL_TYPES
 
                 return format_pointer(f"""std::unordered_map{
                     BASE_EXPANDED_STL_TYPES["std::unordered_map"]
@@ -201,20 +206,20 @@ class ArgType:
                     if key_is_stl else map_key_type
                 ).replace(
                     "{1}",
-                    EXPANDED_STL_TYPES[map_value_type]
-                    if value_is_stl else map_value_type
+                    EXPANDED_STL_TYPES[map_val_type]
+                    if val_is_stl else map_val_type
                 ))
 
             # std::unordered_map is never used as key
             if any([
-                x in map_value_type for x in BASE_EXPANDED_STL_TYPES.keys()
+                x in map_val_type for x in BASE_EXPANDED_STL_TYPES.keys()
             ]):
                 return format_pointer(f"""std::unordered_map{
                     BASE_EXPANDED_STL_TYPES["std::unordered_map"]
                 }""".replace(
                     "{0}", map_key_type
                 ).replace(
-                    "{1}", self._expand_stl_type(map_value_type)
+                    "{1}", self._expand_stl_type(map_val_type)
                 ))
 
             return format_pointer(f"""std::unordered_map{
@@ -222,13 +227,14 @@ class ArgType:
             }""".replace(
                 "{0}", map_key_type
             ).replace(
-                "{1}", map_value_type
+                "{1}", map_val_type
             ))
 
         if stl_type.startswith("std::set"):
             contained = match("std::set<(.*)>", stl_type)
 
-            assert contained is not None, f"Couldn't get contained type for {stl_type}"
+            assert contained is not None, \
+                f"Couldn't get contained type for {stl_type}"
 
             return format_pointer(f"""std::set{
                 BASE_EXPANDED_STL_TYPES["std::set"]
@@ -239,7 +245,8 @@ class ArgType:
         if stl_type.startswith("std::unordered_set"):
             contained = match("std::unordered_set<(.*)>", stl_type)
 
-            assert contained is not None, f"Couldn't get contained type for {stl_type}"
+            assert contained is not None, \
+                f"Couldn't get contained type for {stl_type}"
 
             return format_pointer(f"""std::unordered_set{
                 BASE_EXPANDED_STL_TYPES["std::unordered_set"]
@@ -249,17 +256,17 @@ class ArgType:
 
         raise BaseException(f"[!] Couldn't expand STL type: '{stl_type}'")
 
-    def __init__(self, btype: Union[BaseArgType, BaseShortArgType]):
-        if btype.get("reg"):
-            self.btype = cast(BaseArgType, btype)
-        else:
-            self.btype = {
-                "name": btype["name"],
-                "type": btype["type"],
-                "reg": None
-            }
+    def __init__(self, btype: BaseArgType):
+        self.btype = {
+            "name": btype.get("name", ""),
+            "type": btype["type"],
+            "reg": btype.get("reg", None)  # type: ignore[typeddict-item]
+        }
 
-        self.btype["type"] = self._expand_stl_type(self.btype["type"])
+        arg_t = self.btype["type"]
+
+        self.btype["type"] = self._expand_stl_type(arg_t) \
+            if "std::" in arg_t else arg_t
 
     def __str__(self) -> str:
         if self.btype["name"] == "":
@@ -276,16 +283,11 @@ class ArgType:
         return False
 
     @overload
-    def __getitem__(
-        self,
-        key: Literal[
-            "name", "type"
-        ]
-    ) -> str:
+    def __getitem__(self, key: Literal["name", "type"]) -> str:
         ...
 
     @overload
-    def __getitem__(self, key: Literal["reg"]) -> Optional[str]:
+    def __getitem__(self, key: Literal["reg"]) -> str | None:
         ...
 
     def __getitem__(self, key):

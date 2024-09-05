@@ -1,37 +1,22 @@
-from typing import cast, overload, Union, TypedDict, Literal
+from typing import overload, TypedDict, Literal, NotRequired
 
 from ida_name import is_visible_cp
 
 from broma_ida.broma.argtype import ArgType, RetType
 
 
-class BaseBindingType(TypedDict):
-    """Base binding type"""
+class BindingType(TypedDict):
+    """Binding type"""
     name: str
     class_name: str
-    qualified_name: str
-    ida_qualified_name: str
+    qualified_name: NotRequired[str]
+    ida_qualified_name: NotRequired[str]
     address: int
 
-    return_type: RetType
-    parameters: list[ArgType]
-    is_virtual: bool
-    is_static: bool
-
-
-class BaseShortBindingType(TypedDict):
-    """Base binding type (but shorter)"""
-    name: str
-    class_name: str
-    address: int
-
-
-class BaseShortBindingTypeWithMD(BaseShortBindingType):
-    """Base binding type (shorter, with metadata about the function)"""
-    return_type: RetType
-    parameters: list[ArgType]
-    is_virtual: bool
-    is_static: bool
+    return_type: NotRequired[RetType]
+    parameters: NotRequired[list[ArgType]]
+    is_virtual: NotRequired[bool]
+    is_static: NotRequired[bool]
 
 
 class Binding:
@@ -39,16 +24,10 @@ class Binding:
     TypedDict can't be instantiated, and as such, can't
     have overridden methods
     """
-    binding: BaseBindingType
-    is_overload: bool
+    binding: BindingType
 
-    def _get_ida_qualified_name(
-        self,
-        binding: Union[
-            BaseShortBindingType, BaseShortBindingTypeWithMD
-        ]
-    ) -> str:
-        """Get's the IDA qualified name of a binding.
+    def _get_ida_qualified_name(self, binding: BindingType) -> str:
+        """Gets the IDA qualified name of a binding.
         (because "~" is not allowed in a method's name,
         unless you modify NameChars in ida.cfg)
 
@@ -64,37 +43,34 @@ class Binding:
             return f"""{binding["class_name"]}::d{binding["class_name"]}"""
         return f"""{binding["class_name"]}::{binding["name"]}"""
 
-    def __init__(
-        self,
-        binding: Union[
-            BaseShortBindingType, BaseShortBindingTypeWithMD, BaseBindingType
-        ],
-        is_overload: bool = False
-    ) -> None:
-        if binding.get("qualified_name") is not None:
-            self.binding = cast(BaseBindingType, binding)
-        else:
-            binding = cast(BaseShortBindingType, binding)
+    def __init__(self, binding: BindingType):
+        self.binding = BindingType({
+            "name": binding["name"],
+            "class_name": binding["class_name"],
+            "qualified_name":
+                f"""{binding["class_name"]}::{binding["name"]}""",
+            "ida_qualified_name": self._get_ida_qualified_name(binding),
+            "address": binding["address"],
+            "return_type": binding.get("return_type") or RetType({
+                "name": "", "type": "", "reg": ""
+            }),
+            "parameters": binding.get("parameters") or [],
+            "is_virtual": binding.get("is_virtual") or False,
+            "is_static": binding.get("is_static") or False
+        })
 
-            if binding.get("return_type"):
-                binding = cast(BaseShortBindingTypeWithMD, binding)
+    @property
+    def short_info(self) -> str:
+        """Short info about the binding
 
-            self.binding = BaseBindingType({
-                "name": binding["name"],
-                "class_name": binding["class_name"],
-                "qualified_name":
-                    f"""{binding["class_name"]}::{binding["name"]}""",
-                "ida_qualified_name": self._get_ida_qualified_name(binding),
-                "address": binding["address"],
-                "return_type": binding.get("return_type") or RetType({
-                    "name": "", "type": "", "reg": ""
-                }),
-                "parameters": binding.get("parameters") or [],
-                "is_virtual": binding.get("is_virtual") or False,
-                "is_static": binding.get("is_static") or False
-            })
-
-        self.is_overload = is_overload
+        Returns:
+            str: "[binding qualified name] @ [binding address]"
+        """
+        return f"""{
+            self.binding["qualified_name"]
+        } @ {
+            hex(self.binding["address"])
+        }"""
 
     def __eq__(self, key: object) -> bool:
         if isinstance(key, int):
@@ -134,6 +110,8 @@ class Binding:
         ...
 
     def __getitem__(self, key):
+        if key == "ida_qualified_name":
+            self.__update_ida_qualified_name()
         return self.binding.__getitem__(key)
 
     def __setitem__(self, key, value):
@@ -156,6 +134,6 @@ class Binding:
             self.binding["address"]
         ))
 
-    def update(self):
+    def __update_ida_qualified_name(self):
         self.binding["ida_qualified_name"] = \
             self._get_ida_qualified_name(self.binding)

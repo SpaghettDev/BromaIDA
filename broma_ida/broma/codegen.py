@@ -51,8 +51,6 @@ class BromaCodegen:
         Args:
             path (Path)
         """
-        macro_val = lambda b: "1" if b else "0"
-
         with open(
             self._path / "codegen" / f"{self._target_platform}.hpp",
             "w",
@@ -63,11 +61,11 @@ class BromaCodegen:
                     "BROMAIDA_PLATFORM_MACRO_NAME":
                         self._get_bromaida_platform_macro(),
                     "BROMAIDA_USE_CUSTOM_GNUSTL_VALUE":
-                        macro_val(self._use_custom_gnustl),
+                        int(self._use_custom_gnustl),
                     "BROMAIDA_IS_PLATFORM_MACHO_VALUE":
-                        macro_val(self._target_platform in ["imac", "m1", "ios"]),
+                        int(self._target_platform in ["imac", "m1", "ios"]),
                     "BROMAIDA_IS_PLATFORM_ANDROID_VALUE":
-                        macro_val(
+                        int(
                             self._target_platform in ["android32", "android64"]
                         )
                 })
@@ -85,7 +83,9 @@ class BromaCodegen:
 
             with open(self._path / "stl_types.hpp") as stl_types:
                 f.write("// stl_types.hpp\n")
-                f.writelines(self._filter_relative_includes(stl_types.readlines()))
+                f.writelines(
+                    self._filter_relative_includes(stl_types.readlines())
+                )
                 f.write("\n\n")
 
             with open(self._path / "cocos2d.hpp") as cocos:
@@ -121,11 +121,17 @@ class BromaCodegen:
 
                     if len(split_c) == 2:
                         f.write(
-                            f"""namespace {split_c[0]} {{ class {split_c[1]}; }};\n"""
+                            f"namespace {split_c[0]} {{ "
+                            f"class {split_c[1]}; "
+                            "}}\n"
                         )
                     elif len(split_c) == 3:
                         f.write(
-                            f"""namespace {split_c[0]} {{ namespace {split_c[1]} {{ class {split_c[2]}; }} }}\n"""
+                            f"namespace {split_c[0]} {{ "
+                            f"namespace {split_c[1]} {{ "
+                            f"class {split_c[2]};"
+                            "}} "
+                            "}}\n"
                         )
                 else:
                     f.write(f"class {c};\n")
@@ -182,7 +188,7 @@ class BromaCodegen:
         return f"""BROMAIDA_PLATFORM_{
             plat_to_macro_suffix[self._target_platform]
         }"""
-    
+
     def _filter_relative_includes(self, lines: list[str]) -> list[str]:
         """Comments out relative includes from a list of lines
 

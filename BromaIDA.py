@@ -1,4 +1,5 @@
-VERSION = "5.7.0"
+# flake8-in-file-ignores: noqa: E402
+VERSION = "6.0.0"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"
@@ -8,93 +9,109 @@ PLUGIN_HOTKEY = "Ctrl+Shift+B"
 from idaapi import (
     msg as ida_msg, register_action, unregister_action,
     plugin_t as ida_plugin_t, action_desc_t as ida_action_desc_t,
-    PLUGIN_PROC, PLUGIN_HIDE, PLUGIN_KEEP
+    PLUGIN_PROC, PLUGIN_KEEP
 )
-from ida_kernwin import ask_file, ASKBTN_BTN1, ASKBTN_BTN2
+from ida_kernwin import ask_file
 from idautils import Names
 
 from broma_ida.utils import (
-    popup, stop, get_platform, get_platform_printable
+    stop, get_ida_path, get_platform, get_platform_printable, path_exists
 )
 from broma_ida.broma.importer import BromaImporter
 from broma_ida.broma.exporter import BromaExporter
 from broma_ida.ida_ctx_entry import IDACtxEntry
 
+from broma_ida.data.data_manager import DataManager
+
+from broma_ida.ui.simple_popup import SimplePopup
+from broma_ida.ui.main_form import MainForm
+
+
+def on_import(form: MainForm, code: int = 0):
+    form.Close(1)
+
+    file_path: str = ask_file(False, "GeometryDash.bro", "bro")
+
+    if not path_exists(file_path, ".bro"):
+        SimplePopup("Please select a valid file!", "Cancel").show()
+        stop()
+
+    platform = get_platform()
+    broma_importer = BromaImporter(platform, file_path)
+    broma_importer.parse_file()
+    broma_importer.import_into_idb()
+
+    print("[+] BromaIDA: Finished importing bindings from Broma file")
+    SimplePopup(
+        "Finished importing "
+        f"{get_platform_printable(platform)} "
+        "bindings from Broma file.",
+        "OK"
+    ).show()
+
+    DataManager().close()
+
+
+def on_export(form: MainForm, code: int = 0):
+    form.Close(1)
+
+    platform = get_platform()
+
+    if platform.startswith("android"):
+        SimplePopup(
+            "Cannot export bindings from Android binary!", "Cancel"
+        ).show()
+        stop()
+
+    # for_saving is not True because we need to read the file first
+    # which may not even exist if the saving prompt is used
+    # (since you can select files that don't exist within said prompt)
+    file_path: str = ask_file(False, "GeometryDash.bro", "bro")
+
+    if not path_exists(file_path, ".bro"):
+        SimplePopup("Please select a valid file!", "Cancel").show()
+        stop()
+
+    broma_exporter = BromaExporter(platform, file_path)
+
+    broma_exporter.import_from_idb(Names())
+    broma_exporter.export()
+
+    print(
+        "[+] BromaIDA: Finished exporting "
+        f"{broma_exporter.num_exports} bindings, "
+        f"{broma_exporter.num_ret_exports} return types and "
+        f"{broma_exporter.num_args_names_exports} argument names."
+    )
+    SimplePopup("Finished exporting bindings to Broma file.", "OK").show()
+
+    DataManager().close()
+
 
 def bida_main():
     """BromaIDA main entrypoint"""
-    import_export_prompt = popup(
-        "Import", "Export", "",
-        "Import or Export Broma file?\n"
-    )
+    DataManager().init(get_ida_path("plugins") / "broma_ida" / "shelf")
 
-    if import_export_prompt == ASKBTN_BTN1:
-        filePath: str = ask_file(False, "GeometryDash.bro", "bro")
+    form_code = MainForm(
+        VERSION,
+        get_platform_printable(get_platform()),
+        on_import,
+        on_export
+    ).show()
 
-        if filePath is None or (filePath and not filePath.endswith(".bro")):
-            popup("Ok", "Ok", None, "Please select a valid file!")
-            stop()
-
-        platform = get_platform()
-        broma_importer = BromaImporter(platform)
-
-        try:
-            with open(filePath, "r") as f:
-                broma_importer.parse_file_stream(f)
-        except FileNotFoundError:
-            popup("Ok", "Ok", None, "File doesn't exist? Please try again.")
-            stop()
-
-        broma_importer.import_into_idb()
-
-        print("[+] BromaIDA: Finished importing bindings from Broma file")
-        popup(
-            "Ok", "Ok", None,
-            "Finished importing "
-            f"{get_platform_printable(platform)} "
-            "bindings from Broma file."
-        )
-
-    elif import_export_prompt == ASKBTN_BTN2:
-        platform = get_platform()
-
-        if platform.startswith("android"):
-            popup(
-                "Ok", "Ok", None,
-                "Cannot export bindings from Android binary!"
-            )
-            stop()
-
-        # for_saving is not True because we need to read the file first
-        # which may not even exist if the saving prompt is used
-        # (since you can select files that don't exist within said prompt)
-        filePath = ask_file(False, "GeometryDash.bro", "bro")
-
-        if filePath is None or (filePath and not filePath.endswith(".bro")):
-            popup("Ok", "Ok", None, "Please select a valid file!")
-            stop()
-
-        broma_exporter = BromaExporter(platform, filePath)
-
-        broma_exporter.import_from_idb(Names())
-        broma_exporter.export()
-
-        print(
-            "[+] BromaIDA: Finished exporting "
-            f"{broma_exporter.num_exports} bindings."
-        )
-        popup("Ok", "Ok", None, "Finished exporting bindings to Broma file.")
+    # cancel
+    if form_code == 0:
+        DataManager().close()
 
 
 class BromaIDAPlugin(ida_plugin_t):
     """BromaIDA Plugin"""
-    flags = PLUGIN_PROC | PLUGIN_HIDE
+    flags = PLUGIN_PROC
     comment = "Broma support for IDA."
     help = f"{PLUGIN_HOTKEY} to start the importing/exporting."
     wanted_name = PLUGIN_NAME
-    wanted_hotkey = PLUGIN_HOTKEY
 
-    ACTION_BTIDA = "btida:run_btida"
+    ACTION_BTIDA = "bida:run_bida"
     ACTION_DESC = "Launches the BromaIDA plugin."
 
     def init(self):
@@ -111,7 +128,8 @@ class BromaIDAPlugin(ida_plugin_t):
         ida_msg(f"{PLUGIN_NAME} v{VERSION} unloaded\n")
 
     def run(self, arg):
-        """Ran on "File -> Script File" (shocker) (broken for me :D)"""
+        """Ran on "File -> Script File" (shocker)
+        (does not work because this plugin has multiple py files)"""
         bida_main()
 
     def _register_action(self):

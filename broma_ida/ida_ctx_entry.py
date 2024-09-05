@@ -1,10 +1,10 @@
-import idaapi
+from idaapi import action_handler_t as ida_action_handler_t, AST_ENABLE_ALWAYS
 
 
-class IDACtxEntry(idaapi.action_handler_t):
+class IDACtxEntry(ida_action_handler_t):
     """Credit: cra0's cvutils-getoffset.py"""
     def __init__(self, action_function):
-        idaapi.action_handler_t.__init__(self)
+        super().__init__()
         self.action_function = action_function
 
     def activate(self, ctx):
@@ -12,4 +12,4 @@ class IDACtxEntry(idaapi.action_handler_t):
         return 1
 
     def update(self, ctx):
-        return idaapi.AST_ENABLE_ALWAYS
+        return AST_ENABLE_ALWAYS

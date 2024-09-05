@@ -1,5 +1,3 @@
-from io import TextIOWrapper
-from typing import cast, Optional
 from copy import deepcopy
 
 from idaapi import (
@@ -12,17 +10,20 @@ from idc import (
     FUNC_LIB
 )
 from ida_funcs import get_func, add_func
-from ida_kernwin import ASKBTN_BTN1, ASKBTN_BTN2, ASKBTN_CANCEL
+from ida_kernwin import (
+    show_wait_box, hide_wait_box, warning as ida_warning,
+    ASKBTN_BTN1
+)
 from ida_typeinf import (
-    get_idati, get_ordinal_qty,
+    get_idati, get_ordinal_qty, set_c_header_path,
     func_type_data_t as ida_func_type_data_t,
     tinfo_t as ida_tinfo_t
 )
-from ida_nalt import get_tinfo
 from idautils import Names
 
 from re import sub
 from pathlib import Path
+from hashlib import file_digest
 
 from pybroma import Root, Type, Class
 
@@ -31,51 +32,37 @@ from broma_ida.broma.binding import Binding
 from broma_ida.broma.argtype import ArgType, RetType
 from broma_ida.broma.codegen import BromaCodegen
 from broma_ida.utils import (
-    get_platform_printable, get_short_info,
-    rename_func, popup, stop,
-    get_ida_plugin_path
+    get_platform_printable, rename_func,
+    get_function_info, ask_popup, get_ida_path,
+    path_exists, stop
 )
 
+from broma_ida.data.data_manager import DataManager
 
-g_has_idaclang = False
+from broma_ida.ui.simple_popup import SimplePopup
+from broma_ida.ui.directory_input_form import DirectoryInputForm
+
+
+HAS_IDACLANG = False
 
 try:
     from ida_srclang import (
         set_parser_argv, parse_decls_for_srclang,
         SRCLANG_CPP
     )
-    g_has_idaclang = True
+    HAS_IDACLANG = True
 except ImportError:
     pass
 
 
 class BIUtils:
     """BromaImporter utilities"""
-    @staticmethod
-    def get_function_info(ida_ea: int) -> Optional[ida_func_type_data_t]:
-        """Gets the info about a function
-
-        Args:
-            ida_ea (int): The function address
-
-        Returns:
-            Optional[ida_func_type_data_t]: The ida_func_type_data_t
-            of the function or None if not found
-        """
-        tif = ida_tinfo_t()
-        func_info = ida_func_type_data_t()
-
-        if get_tinfo(tif, ida_ea):
-            if tif.get_func_details(func_info):
-                return func_info
-
-        return None
 
     @staticmethod
     def get_type_info(
         name: str,
         update: bool = False
-    ) -> Optional[ida_tinfo_t]:
+    ) -> ida_tinfo_t | None:
         """Gets the info about a type/struct
 
         Args:
@@ -83,7 +70,7 @@ class BIUtils:
             update (bool): Should update the cache. Defaults to False.
 
         Returns:
-            Optional[ida_tinfo_t]: The ida_tinfo_t of the type
+            ida_tinfo_t | None: The ida_tinfo_t of the type
             or None if not found
         """
         if not hasattr(BIUtils.get_type_info, "types") or update:
@@ -121,7 +108,15 @@ class BIUtils:
         ]
 
     @staticmethod
-    def verify_type(t: Optional[ida_tinfo_t]) -> bool:
+    def verify_type(t: ida_tinfo_t | None) -> bool:
+        """Verifies an ida tinfo_t
+
+        Args:
+            t (ida_tinfo_t | None):
+
+        Returns:
+            bool: True on error
+        """
         if t is None:
             return False
 
@@ -135,15 +130,14 @@ class BIUtils:
         """Verifies the existance and size of types
 
         Returns:
-            bool
+            bool: True on success
         """
         holy_shit_struct = BIUtils.get_type_info("holy_shit")
 
         if holy_shit_struct:
             if holy_shit_struct.get_size() != \
-                BIUtils.get_holy_shit_struct_size(platform):
-                popup(
-                    "Ok", "Ok", None,
+                    BIUtils.get_holy_shit_struct_size(platform):
+                ida_warning(
                     "Mismatch in STL types! "
                     "Classes will not be imported!\n"
                     "To fix this, go to the local types window "
@@ -152,15 +146,14 @@ class BIUtils:
                 )
                 return False
 
-        if any([
+        if any((
             BIUtils.verify_type(BIUtils.get_type_info(t))
             for t in (
                 "cocos2d::CCObject", "cocos2d::CCNode", "cocos2d::CCImage",
                 "cocos2d::CCApplication", "cocos2d::CCDirector"
             )
-        ]):
-            popup(
-                "Ok", "Ok", None,
+        )):
+            ida_warning(
                 "Mismatch in cocos2d types! "
                 "Classes will not be imported!\n"
                 "To fix this, go to the local types window "
@@ -170,7 +163,7 @@ class BIUtils:
             return False
 
         return True
-    
+
     @staticmethod
     def get_holy_shit_struct_size(platform: BROMA_PLATFORMS) -> int:
         """Gets the size of the STL struct for the supplied platform
@@ -214,13 +207,34 @@ class BIUtils:
 
         return plat_to_parser_argv[platform]
 
+    @staticmethod
+    def prompt_invalid_dir(input_str: str, dm_key: str):
+        """Shows a warning and prompts the user to input a valid directory.
+        Saves the directory to the DataManager
+
+        Args:
+            input_str (str)
+            dm_key (str)
+        """
+        ida_warning(
+            f"Importing types with an invalid {input_str}!\n"
+            "Please set one!"
+        )
+        dir_form = DirectoryInputForm(input_str)
+        dir_form.show()
+
+        dir_str = dir_form.saved_controls.iDir
+
+        if not path_exists(dir_str):
+            ida_warning("bruh")
+            stop()
+
+        DataManager().set(dm_key, dir_str)
+
     # Signature stuff
 
     @staticmethod
-    def has_mismatch(
-        function: ida_func_type_data_t,
-        binding: Binding
-    ) -> bool:
+    def has_mismatch(function: ida_func_type_data_t, binding: Binding) -> bool:
         """Checks if there is a mismatch between the idb and a binding.
 
         Args:
@@ -239,11 +253,11 @@ class BIUtils:
 
         for i, arg in enumerate(function):
             if i == 0 and not binding["is_static"]:
-                if str(arg) != f"""{binding["class_name"]} *""":
+                if str(arg.type) != f"""{binding["class_name"]} *""":
                     return True
             elif str(arg).replace(" *", "*") != binding["parameters"][
-                    i - (0 if binding["is_static"] else 1)
-                ]["type"]:
+                i - (0 if binding["is_static"] else 1)
+            ]["type"]:
                 return True
 
         return False
@@ -272,6 +286,8 @@ class BIUtils:
     @staticmethod
     def get_function_signature(binding: Binding) -> str:
         """Returns a C++ function signature for the given function.
+        Example:
+        "virtual void GameObject::setOrientedRectDirty(GameObject*, bool);"
 
         Args:
             binding (Binding): The binding.
@@ -297,16 +313,16 @@ class BIUtils:
             binding (Binding)
         """
         # strip const, & and * from the type
-        strip_crp = lambda t: sub(
-            "(?: )?const(?: )?", "", t
-        ).removesuffix("&").removesuffix("*")
+        strip_crp = lambda t: sub(  # noqa: E731
+            r"(?:\s*)?(?:^const |const(?:\s*)?.?$)(?:\s*)?", "", t
+        ).removesuffix("&").removesuffix("*").lstrip().rstrip()
 
         args_has_stl_type = False
         ret_has_stl_type = False
 
         # we don't have an issue with std::string, only with generic stl types
         if "std::" in binding["return_type"]["type"] and \
-            strip_crp(binding["return_type"]["type"]) != "std::string":
+                strip_crp(binding["return_type"]["type"]) != "std::string":
             ret_has_stl_type = True
 
         for parameter in binding["parameters"]:
@@ -336,10 +352,10 @@ class BIUtils:
         # first set correct amount of arguments
         SetType(ea, BIUtils.get_function_signature(binding_fix))
 
-        function_data = BIUtils.get_function_info(ea)
+        function_data = get_function_info(ea, True)
 
         if function_data is None:
-            print(
+            ida_warning(
                 "Couldn't fix STL parameters for "
                 f"""function {binding["qualified_name"]}!"""
             )
@@ -353,6 +369,14 @@ class BIUtils:
                 BTF_TYPEDEF,
                 False
             )
+
+            if stl_type.get_ordinal() == 0:
+                ida_warning(
+                    f"STL Type '{stl_type.get_type_name()}' "
+                    "isn't present in the type library!\n"
+                    "Please open a GitHub issue."
+                )
+                return
 
             if binding["parameters"][idx]["type"].endswith("&") or \
                     binding["parameters"][idx]["type"].endswith("*"):
@@ -393,14 +417,15 @@ class BIUtils:
         apply_tinfo(ea, func_tinfo, TINFO_DEFINITE)
 
 
+# TODO: split into BromaTypesImporter and BromaFunctionsImpoter
 class BromaImporter:
     """Broma importer of all time using PyBroma now!"""
+
     _target_platform: BROMA_PLATFORMS
     _file_path: str
     _has_types: bool = False
 
     bindings: list[Binding] = []
-    # { 0xaddr: [Binding, Binding, ...] }
     duplicates: dict[int, list[Binding]] = {}
 
     def _codegen_classes(self, classes: dict[str, Class]) -> bool:
@@ -412,97 +437,153 @@ class BromaImporter:
         Returns:
             bool
         """
-        if not g_has_idaclang:
-            return False
-
-        plugin_path = get_ida_plugin_path()
-
-        if plugin_path is None:
-            popup(
-                "Ok", "Ok", None,
-                "This shouldn't happen... Couldn't find plugin folder, "
-                "please make an issue in the repository!"
-            )
+        if not HAS_IDACLANG:
             return False
 
         use_custom_gnustl = False
         if self._target_platform != "win":
-            if popup(
-                "Yes", "No", None,
-                "Use custom GNU STL?\n"
-                "(Chose No ONLY if you're using genuine GCC headers)",
-                1
-            ) == ASKBTN_BTN1:
-                use_custom_gnustl = True
+            use_custom_gnustl = DataManager().get(
+                "use_custom_android_gnustl"
+                if self._target_platform.startswith("android")
+                else "use_custom_mac_gnustl"
+            )
 
         BromaCodegen(
             self._target_platform,
             use_custom_gnustl,
             classes,
-            plugin_path / "broma_ida" / "types",
+            get_ida_path("plugins") / "broma_ida" / "types",
             Path("/".join(Path(self._file_path).parts[:-1]))
         ).write()
 
         return True
 
-    def __init__(self, platform: BROMA_PLATFORMS):
+    def __init__(self, platform: BROMA_PLATFORMS, filepath: str):
         """Initializes a BromaImporter instance
 
         Args:
             platform (BROMA_PLATFORMS): The target platform
+            filepath (str): The Broma file's path
         """
         self._reset()
         self._target_platform = platform
+        self._file_path = filepath
 
-    def parse_file_stream(self, file: TextIOWrapper):
-        """Parses a .bro file from a file stream
-        and imports the members and methods
-
-        Args:
-            file (TextIOWrapper): The file stream
-
-        Returns:
-            tuple[list[Binding], dict[int, list[Binding]]]:
-            0 contains unique bindings, 1 contains duplicates
+    def parse_file(self):
         """
-        self._file_path = file.name
+        Parses the broma file passed into the constructor
+        and imports the members and methods
+        """
         root = Root(self._file_path)
+        import_types: bool = DataManager().get("import_types")
 
-        if g_has_idaclang and popup(
-            "Yes", "No", None, "Import classes from Broma?"
-        ) == ASKBTN_BTN1:
+        if not HAS_IDACLANG and import_types:
+            ida_warning(
+                "Trying to import types without IDAClang! "
+                "Disabling importing of types..."
+            )
+            DataManager().set("import_types", False)
+            import_types = False
+
+        if import_types and not DataManager().get("disable_broma_hash_check"):
+            cur_hash: str
+            with open(self._file_path, "rb", buffering=0) as f:
+                cur_hash = file_digest(f, "sha256").hexdigest()
+
+            last_broma_info = DataManager().get(
+                "last_broma_info", (self._target_platform, "")
+            )
+
+            if last_broma_info[0] == self._target_platform and \
+                    last_broma_info[1] != "":
+                if last_broma_info[1] == cur_hash:
+                    print(
+                        "[!] BromaImporter: Detected same Broma hash. "
+                        "Will not import types..."
+                    )
+                    import_types = False
+            elif last_broma_info[1] == "":
+                DataManager().set(
+                    "last_broma_info", (self._target_platform, cur_hash)
+                )
+
+        if import_types:
+            use_custom_gnustl = DataManager().get(
+                "use_custom_android_gnustl"
+                if self._target_platform.startswith("android") else
+                "use_custom_mac_gnustl"
+            )
+            custom_gnustl_dir_key = "android_gnustl_dir" \
+                if self._target_platform.startswith("android") \
+                else "mac_gnustl_dir"
+
+            msvcstl_dir = DataManager().get("msvcstl_dir")
+
+            if (self._target_platform == "win" or not use_custom_gnustl) and \
+                    not path_exists(msvcstl_dir):
+                BIUtils.prompt_invalid_dir(
+                    "MSVC STL directory", "msvcstl_dir"
+                )
+
+            if self._target_platform != "win":
+                gnustl_dir = DataManager().get(custom_gnustl_dir_key)
+
+                if use_custom_gnustl and not path_exists(gnustl_dir):
+                    BIUtils.prompt_invalid_dir(
+                        f"""{
+                            'Android' if self._target_platform.startswith(
+                                'android'
+                            ) else 'Mac'
+                        } GNU STL directory""",
+                        custom_gnustl_dir_key
+                    )
+
+            if self._target_platform == "win" or not use_custom_gnustl:
+                set_c_header_path(DataManager().get("msvcstl_dir"))
+            elif use_custom_gnustl:
+                set_c_header_path(DataManager().get(custom_gnustl_dir_key))
+
+        if HAS_IDACLANG and import_types:
             if BIUtils.verify_types(self._target_platform) and \
                     self._codegen_classes(root.classesAsDict()):
-                if popup(
-                    "Yes", "No", None,
-                    "Set default compiler arguments? (Recommended)"
-                ) == ASKBTN_BTN1:
+                set_default_parser_args = DataManager().get(
+                    "set_default_parser_args"
+                )
+
+                if set_default_parser_args:
                     set_parser_argv(
                         "clang",
                         BIUtils.get_parser_argv(self._target_platform)
                     )
 
-                popup(
-                    "Ok", "Ok", None,
+                SimplePopup(
                     "Importing Types...\n"
                     "This will probably freeze IDA for a couple of "
                     "seconds, if not minutes.\n"
-                    "So don't close the plugin/IDA!\n"
-                )
+                    "Click on 'OK' to confirm.",
+                    "OK"
+                ).show()
+
+                show_wait_box("HIDECANCEL\nImporting types...")
 
                 parse_decls_for_srclang(
                     SRCLANG_CPP,
                     None,
                     (
-                        get_ida_plugin_path() /
+                        get_ida_path("plugins") /
                         "broma_ida" / "types" / "codegen" /
-                        f"{self._target_platform}.hpp"  # type: ignore
+                        f"{self._target_platform}.hpp"
                     ).as_posix(),
                     True
                 )
 
+                hide_wait_box()
+
                 self._has_types = True
             else:
+                # TODO: check if idb already has types, if so set this to True
+                # so you dont HAVE to import types to be able to modify
+                # function signatures
                 self._has_types = False
 
         if self._target_platform.startswith("android"):
@@ -556,8 +637,7 @@ class BromaImporter:
                         ]
                         error_location = \
                             f"{class_name}::{function.name} " \
-                            f"and {dup_binding['qualified_name']} " \
-                            f"@ {hex(function_address)}"
+                            f"and {dup_binding.short_info}"
 
                         if f"{class_name}::{function.name}" == \
                                 dup_binding["qualified_name"]:
@@ -576,8 +656,7 @@ class BromaImporter:
                         print(
                             "[!] BromaImporter: Duplicate binding! "
                             f"({class_name}::{function.name} "
-                            f"and {dup_binding['qualified_name']} "
-                            f"@ {hex(function_address)})"
+                            f"and {dup_binding.short_info}"
                         )
                         del self.bindings[self.bindings.index(dup_binding)]
                         self.duplicates[function_address] = []
@@ -630,7 +709,6 @@ class BromaImporter:
 
     def import_into_idb(self):
         """Imports the bindings into the current idb"""
-
         if self._target_platform.startswith("android"):
             if not self._has_types:
                 return
@@ -652,11 +730,9 @@ class BromaImporter:
                     continue
 
                 if BIUtils.has_mismatch(
-                    cast(
-                        ida_func_type_data_t,
-                        BIUtils.get_function_info(ida_ea)
-                        ), binding
-                    ):
+                        get_function_info(ida_ea),
+                        binding
+                ):
                     BIUtils.set_function_signature(ida_ea, binding)
 
             return
@@ -673,23 +749,21 @@ class BromaImporter:
             if ida_func_flags & FUNC_LIB:
                 print(
                     f"[!] BromaImporter: Tried to rename a library function! "
-                    f"({get_short_info(binding)})"
+                    f"({binding.short_info})"
                 )
                 continue
 
             if get_func(ida_ea).start_ea != ida_ea:
                 print(
                     f"[!] BromaImporter: Function is in the middle of "
-                    f"another one! ({get_short_info(binding)})"
+                    f"another one! ({binding.short_info})"
                 )
                 continue
 
-            if self._has_types and \
-                BIUtils.has_mismatch(cast(
-                    ida_func_type_data_t,
-                    BIUtils.get_function_info(ida_ea)
-                    ), binding
-                ):
+            if self._has_types and BIUtils.has_mismatch(
+                    get_function_info(ida_ea),
+                    binding
+            ):
                 BIUtils.set_function_signature(ida_ea, binding)
 
             if ida_name.startswith("sub_"):
@@ -698,26 +772,23 @@ class BromaImporter:
                     binding["ida_qualified_name"]
                 )
             elif sub("_[0-9]+", "", ida_name) != binding["ida_qualified_name"]:
-                mismatch_popup = popup(
-                    "Overwrite", "Keep", "",
-                    f"""Mismatch in Broma ({binding["qualified_name"]}) """
-                    f"and idb ({ida_name})!\n"
-                    "Overwrite from Broma or keep current name?"
-                )
-
-                if mismatch_popup == ASKBTN_BTN1:
+                if DataManager().get("always_overwrite_idb") or \
+                    ask_popup(
+                        f"""Mismatch in Broma ({binding["qualified_name"]}) """
+                        f"and idb ({ida_name})!\n"
+                        "Overwrite from Broma or keep current name?",
+                        "Overwrite", "Keep"
+                ) == ASKBTN_BTN1:
                     rename_func(
                         ida_ea,
                         binding["ida_qualified_name"]
                     )
-                elif mismatch_popup == ASKBTN_CANCEL:
-                    stop()
 
         # and now handle duplicates
         for addr, bindings in self.duplicates.items():
             ida_ea = get_imagebase() + addr
 
-            func_cmt = get_func_cmt(ida_ea, True)
+            func_cmt: str = get_func_cmt(ida_ea, True)
             func_names = ", ".join(
                 [binding["qualified_name"] for binding in bindings]
             )
@@ -744,14 +815,19 @@ class BromaImporter:
                         ida_ea, f"Merged with: {func_names}", True
                     )
             else:
-                if popup(
-                    "Overwrite", "Keep", None,
-                    f"{hex(addr)} already has a comment! Would you like to "
-                    "overwrite it with merge information or keep the current "
-                    "comment?\n"
-                    "(You will be prompted with this again if you keep the "
-                    "current comment and rerun the "
-                    "script and there are merged functions!)"
+                if DataManager().get(
+                        "always_overwrite_merge_information"
+                    ) or ask_popup(
+                        f"{hex(addr)} already has a comment! "
+                        "Would you like to overwrite it with "
+                        "merge information or keep the current comment?\n"
+                        "(You will be prompted with this again if you "
+                        "keep the current comment and rerun the "
+                        "script and there are merged functions!)\n"
+                        "(You can enable 'Always overwrite function "
+                        "comments with merge information' in settings "
+                        "to get rid of this popup)",
+                        "Overwrite", "Keep"
                 ) == ASKBTN_BTN1:
                     set_func_cmt(
                         ida_ea, f"Merged with: {func_names}", True

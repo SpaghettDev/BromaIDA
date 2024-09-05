@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Install Plugin",
+            "type": "shell",
+            "command": "cp BromaIDA.py 'C:/Applications/IDA Pro 8.3/plugins'; cp broma_ida 'C:/Applications/IDA Pro 8.3/plugins' -Force -Recurse",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem",
+                "close": true
+            }
+        },
+        {
+            "label": "Launch IDA v8.3",
+            "type": "shell",
+            "command": "Start-Process -NoNewWindow 'C:/Applications/IDA Pro 8.3/ida64.exe'",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem",
+                "close": true
+            }
+        }
+    ]
+}
