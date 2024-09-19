@@ -1,5 +1,5 @@
 # flake8-in-file-ignores: noqa: E402
-VERSION = "6.0.0"
+VERSION = "6.1.0"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"
@@ -15,7 +15,8 @@ from ida_kernwin import ask_file
 from idautils import Names
 
 from broma_ida.utils import (
-    stop, get_ida_path, get_platform, get_platform_printable, path_exists
+    stop, get_platform, get_platform_printable, path_exists,
+    IDAUtils
 )
 from broma_ida.broma.importer import BromaImporter
 from broma_ida.broma.exporter import BromaExporter
@@ -90,7 +91,9 @@ def on_export(form: MainForm, code: int = 0):
 
 def bida_main():
     """BromaIDA main entrypoint"""
-    DataManager().init(get_ida_path("plugins") / "broma_ida" / "shelf")
+    DataManager().init(
+        IDAUtils.get_ida_path("plugins") / "broma_ida" / "shelf"
+    )
 
     form_code = MainForm(
         VERSION,

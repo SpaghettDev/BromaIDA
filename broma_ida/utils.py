@@ -4,7 +4,7 @@ from idaapi import (
     get_imagebase, get_inf_structure, decompile,
     BADADDR, SN_NOWARN
 )
-from ida_kernwin import ask_buttons, ASKBTN_BTN1
+from ida_kernwin import ASKBTN_BTN1
 from ida_name import get_name_ea
 from ida_diskio import idadir
 from ida_ida import f_PE, f_MACHO, f_ELF
@@ -22,6 +22,15 @@ from struct import unpack
 from pathlib import Path
 
 from broma_ida.broma.constants import BROMA_PLATFORMS
+from broma_ida.ui.ask_popup import AskPopup
+
+HAS_IDACLANG = False
+try:
+    import ida_srclang
+    del ida_srclang
+    HAS_IDACLANG = True
+except ModuleNotFoundError:
+    pass
 
 # Mach-O Load commands
 MINIMUM_OS_VERSION_LOAD_COMMAND = 0x32
@@ -40,64 +49,6 @@ g_platform: BROMA_PLATFORMS = None  # type: ignore[assignment]
 def stop(reason: str | None = None) -> NoReturn:
     """Nuh Uh"""
     raise Exception() if reason is None else Exception(reason)
-
-
-def ask_popup(
-    text: str,
-    button1: str = "Yes",
-    button2: str = "No",
-    default: int = 1
-) -> int:
-    """Quick ask popup
-
-    Args:
-        text (str): The text to put.
-        button1 (str, optional): Button 1 text. Defaults to "No".
-        button2 (str, optional): Button 2 text. Defaults to "Yes".
-        default (int, optional): Default option. Defaults to 1 (button1).
-    """
-    return ask_buttons(button1, button2, None, default, f"HIDECANCEL\n{text}")
-
-
-def rename_func(addr: int, name: str, max: int = 10) -> bool:
-    """Renames the addr. Accounts for overloads by appending _X
-    where X is a number between 1 and max (exclusive)
-
-    Args:
-        addr (int): The address to rename
-        name (str): The name to give it
-        max (int, optional): Maximum number of retires. Defaults to 10.
-
-    Returns:
-        bool: True if the address has been renamed successfully
-        after max trues
-    """
-    renamed = False
-
-    for i in range(max):
-        if set_name(addr, name if i == 0 else f"{name}_{i}", SN_NOWARN):
-            renamed = True
-            break
-
-    if not renamed:
-        ida_prev_addr = get_name_ea(BADADDR, name)
-        if ida_prev_addr != 0xFFFFFFFF and addr != ida_prev_addr:
-            if ask_popup(
-                f"{name} is already taken at "
-                f"{hex(ida_prev_addr - get_imagebase())} while trying to "
-                f"rename {hex(addr)}\n"
-                "Overwrite or keep current name?\n"
-                "(Old location will be renamed to "
-                f"sub_{hex(ida_prev_addr)[2:].upper()})",
-                "Overwrite", "Keep"
-            ) == ASKBTN_BTN1:
-                set_name(
-                    ida_prev_addr,
-                    f"sub_{hex(ida_prev_addr)[2:]}",
-                    SN_NOWARN
-                )
-
-    return renamed
 
 
 # Internal
@@ -206,15 +157,6 @@ def get_platform_printable(platform: BROMA_PLATFORMS) -> str:
     return platform_to_printable[platform]
 
 
-def get_ida_path(path: str) -> Path:
-    """Gets a path relative to the IDA root folder
-
-    Returns:
-        Path: The path as a pathlib.Path
-    """
-    return Path(idadir(path))
-
-
 def path_exists(path: str, ext: str = "") -> bool:
     """Checks if a path exists.
 
@@ -236,40 +178,95 @@ def path_exists(path: str, ext: str = "") -> bool:
         return p_path.suffix == ext and p_path.exists()
 
 
-def get_function_info(
-        ida_ea: int,
-        force: bool = False
-) -> ida_func_type_data_t:
-    """Gets the info about a function
+class IDAUtils:
+    """Some IDA utilities."""
 
-    Args:
-        ida_ea (int): The function address
-        force (bool, optional): Should the data be forcefully gotten.
-            Forces a decompilation of ida_ea. Defaults to False.
+    @staticmethod
+    def rename_func(addr: int, name: str, max: int = 10) -> bool:
+        """Renames the addr. Accounts for overloads by appending _X
+        where X is a number between 1 and max (exclusive)
 
-    Returns:
-        ida_func_type_data_t: The func_type_data_t of the function.
-        Returns None only if the function is too big to decompile
-    """
-    tif = ida_tinfo_t()
-    func_info = ida_func_type_data_t()
+        Args:
+            addr (int): The address to rename
+            name (str): The name to give it
+            max (int, optional): Maximum number of retires. Defaults to 10.
 
-    if get_tinfo(tif, ida_ea):
-        if tif.get_func_details(func_info):
-            return func_info
+        Returns:
+            bool: True if the address has been renamed successfully
+            after max trues
+        """
+        renamed = False
 
-    # if we reached here then get_func_details
-    # returned False for no fucking reason
+        for i in range(max):
+            if set_name(addr, name if i == 0 else f"{name}_{i}", SN_NOWARN):
+                renamed = True
+                break
 
-    if not force:
-        return None
+        if not renamed:
+            ida_prev_addr = get_name_ea(BADADDR, name)
+            if ida_prev_addr != 0xFFFFFFFF and addr != ida_prev_addr:
+                if AskPopup(
+                    f"{name} is already taken at "
+                    f"{hex(ida_prev_addr - get_imagebase())} while trying to "
+                    f"rename {hex(addr)}\n"
+                    "Overwrite or keep current name?\n"
+                    "(Old location will be renamed to "
+                    f"sub_{hex(ida_prev_addr)[2:].upper()})",
+                    "Overwrite", "Keep",
+                    icon="WARNING"
+                ).show() == ASKBTN_BTN1:
+                    set_name(
+                        ida_prev_addr,
+                        f"sub_{hex(ida_prev_addr)[2:]}",
+                        SN_NOWARN
+                    )
 
-    xfunc = decompile(ida_ea)
+        return renamed
 
-    if xfunc is None:
-        # function is too big to decompile, or some other decomp error
-        return None
+    @staticmethod
+    def get_ida_path(path: str) -> Path:
+        """Gets a path relative to the IDA root folder
 
-    xfunc.type.get_func_details(func_info)
+        Returns:
+            Path: The path as a pathlib.Path
+        """
+        return Path(idadir(path))
 
-    return func_info
+    @staticmethod
+    def get_function_info(
+            ida_ea: int,
+            force: bool = False
+    ) -> ida_func_type_data_t:
+        """Gets the info about a function
+
+        Args:
+            ida_ea (int): The function address
+            force (bool, optional): Should the data be forcefully gotten.
+                Forces a decompilation of ida_ea. Defaults to False.
+
+        Returns:
+            ida_func_type_data_t: The func_type_data_t of the function.
+            Returns None only if the function is too big to decompile
+        """
+        tif = ida_tinfo_t()
+        func_info = ida_func_type_data_t()
+
+        if get_tinfo(tif, ida_ea):
+            if tif.get_func_details(func_info):
+                return func_info
+
+        # if we reached here then get_func_details
+        # returned False for no fucking reason
+
+        if not force:
+            return None  # type: ignore
+
+        xfunc = decompile(ida_ea)
+
+        if xfunc is None:
+            # function is too big to decompile, or some other decomp error
+            return None  # type: ignore
+
+        xfunc.type.get_func_details(func_info)  # type: ignore
+
+        return func_info

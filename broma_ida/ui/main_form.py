@@ -46,7 +46,7 @@ Select Mode:<##Import:{iImportButton}><##Export:{iExportButton}>
             "iImportButton": Form.ButtonInput(self.onImportButton),
             "iExportButton": Form.ButtonInput(self.onExportButton),
             "iSettingsButton": Form.ButtonInput(
-                self.onSettingsButton, swidth=27
+                self.onSettingsButton, swidth="27"
             )
         })
 

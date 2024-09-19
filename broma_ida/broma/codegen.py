@@ -140,11 +140,9 @@ class BromaCodegen:
             f.flush()
 
             f.write("// extras\n")
-            for _, broma_class in (
-                Root(str(self._broma_path / "Extras.bro"))
-                    .classesAsDict()
-                    .items()
-            ):
+            for broma_class in Root(
+                    str(self._broma_path / "Extras.bro")
+            ).classes:
                 f.write(
                     ClassBuilder(self._target_platform, broma_class).get_str()
                 )

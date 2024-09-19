@@ -1,20 +1,28 @@
 from ida_kernwin import Form
 
+from broma_ida.utils import HAS_IDACLANG
+
 from broma_ida.ui.types.dynamic_form import DynamicForm
 from broma_ida.data.data_manager import DataManager
-
-HAS_IDACLANG = False
-
-try:
-    import ida_srclang
-    del ida_srclang
-    HAS_IDACLANG = True
-except ImportError:
-    pass
 
 
 class SettingsForm(DynamicForm):
     """The settings form"""
+
+    rAlwaysOverwriteMergeInformation: Form.ChkGroupItemControl
+    rDisableBromaHashCheck: Form.ChkGroupItemControl
+    rAlwaysOverwriteIDB: Form.ChkGroupItemControl
+    rExportReturnTypes: Form.ChkGroupItemControl
+    rExportFunctionArgumentsNames: Form.ChkGroupItemControl
+
+    rImportTypes: Form.ChkGroupItemControl
+    rSetDefaultParserArguments: Form.ChkGroupItemControl
+    rUseCustomAndroidGNUSTL: Form.ChkGroupItemControl
+    rUseCustomMacGNUSTL: Form.ChkGroupItemControl
+
+    iMSVCSTLDir: Form.DirInput
+    iAndroidGNUSTLDir: Form.DirInput
+    iMacGNUSTLDir: Form.DirInput
 
     def __init__(self, version: str):
         super().__init__("""STARTITEM 0

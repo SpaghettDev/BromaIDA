@@ -1,6 +1,6 @@
+/__misc__
 /.vscode
 /.mypy_cache
 /**/__pycache__
 /codegen.txt
-/jupyter
 /broma_ida/types/codegen/*

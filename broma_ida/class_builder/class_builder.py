@@ -68,7 +68,7 @@ class ClassBuilder:
                     self._class_str += "\n"
                     has_left_functions = False
 
-                self._class_str += f"""\tPAD({hex(int(pad_amount, 16))});\n"""
+                self._class_str += f"""\tPAD({pad_amount});\n"""
 
         self._class_str += "};\n\n"
 

@@ -4,6 +4,8 @@ from broma_ida.ui.types.dynamic_form import DynamicForm
 
 from broma_ida.utils import path_exists
 
+__all__ = ["DirectoryInputForm"]
+
 
 class DirectoryInputForm(DynamicForm):
     """
@@ -27,7 +29,7 @@ BromaIDA
         super().onFormChange(fid)
 
         if fid in [-2, -3]:
-            dir_value = self.GetControlValue(self.iDir)
+            dir_value: str = self.GetControlValue(self.iDir)  # type: ignore
 
             if not path_exists(dir_value):
                 ida_warning("Please input a valid path!")

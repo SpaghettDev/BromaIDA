@@ -82,7 +82,7 @@ The options you chose will be saved into a [shelf](https://docs.python.org/3/lib
 
 ## Utilities
 
-This is section is meant for people who want to contribute.
+This section is meant for people who want to contribute.
 
 In the `utils` folder, you can find some utilities that can help in contributing.
 

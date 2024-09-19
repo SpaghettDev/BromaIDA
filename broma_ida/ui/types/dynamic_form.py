@@ -1,20 +1,28 @@
-from typing import Any
+from typing import Any as _Any
 
-from ida_kernwin import py_register_compiled_form, Form
+from ida_kernwin import (
+    py_register_compiled_form as _py_register_compiled_form,
+    Form as _Form
+)
 
 __all__ = ["DynamicFormControls", "DynamicForm"]
 
-SKIPPED_CONTROLS = (Form.FormChangeCb, Form.ButtonInput)
+
+_SKIPPED_CONTROLS = (_Form.FormChangeCb, _Form.ButtonInput)
+"""A tuple of controls that shouldn't be saved after freeing."""
 
 
 class DynamicFormControls:
     """This class's members are added dynamically"""
 
-    def add_control(self, name: str, value: Any):
+    def add_control(self, name: str, value: _Any):
         self.__setattr__(name, value)
 
+    def __getattr__(self, name: str) -> _Any:
+        pass
 
-class DynamicForm(Form):
+
+class DynamicForm(_Form):
     """
     An ida_kernwin.Form that automatically frees its resources after its closed
     (amazing api ida... what is this? fuckin C??)
@@ -34,12 +42,12 @@ class DynamicForm(Form):
     def __save_controls(self):
         """Saves the controls from Form.__controls."""
         for name, ctrl in self.controls.items():
-            if isinstance(ctrl, SKIPPED_CONTROLS):
+            if isinstance(ctrl, _SKIPPED_CONTROLS):
                 continue
 
             self.save_control(name, ctrl)
 
-    def save_control(self, name: str, control: Form.Control):
+    def save_control(self, name: str, control: _Form.Control):
         """Saves a control's value.
 
         Args:
@@ -54,14 +62,14 @@ class DynamicForm(Form):
 
             self.saved_controls.add_control(name, control_value)
         except (NotImplementedError, ValueError):
-            value: Any = None
+            value: _Any = None
 
-            if isinstance(control, Form.StringLabel):
+            if isinstance(control, _Form.StringLabel):
                 value = control.arg.value.decode()
             elif hasattr(control, "value"):
-                value = control.value
+                value = control.value  # type: ignore
             elif hasattr(control, "checked"):
-                value = bool(control.checked)
+                value = bool(control.checked)  # type: ignore
 
             assert value is not None, \
                 f"Couldn't save control '{control}' of type '{type(control)}'"
@@ -108,10 +116,12 @@ class DynamicForm(Form):
 
         args = self.CompileEx(self.form)
 
+        self._Form__controls: dict[str, _Form.Control]
+
         if "___dummyfchgcb" in self._Form__controls:
-            form_change_cb = Form.FormChangeCb(self.onFormChange)
-            form_change_cb.form = self
-            form_change_cb.parent_hasattr = True
+            form_change_cb = _Form.FormChangeCb(self.onFormChange)
+            form_change_cb.form = self  # type: ignore
+            form_change_cb.parent_hasattr = True  # type: ignore
 
             self._Form__controls["___dummyfchgcb"].free()
             self._Form__controls["___dummyfchgcb"] = form_change_cb
@@ -119,7 +129,7 @@ class DynamicForm(Form):
 
         self._Form__args = args
 
-        py_register_compiled_form(self)
+        _py_register_compiled_form(self)
 
         self.setup()
         code = self.Execute()
