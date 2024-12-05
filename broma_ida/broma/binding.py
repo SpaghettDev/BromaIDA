@@ -9,7 +9,7 @@ from ida_name import is_visible_cp
 from pybroma import FunctionBindField
 
 from broma_ida.broma.argtype import ArgType, RetType
-from broma_ida.utils import HAS_IDACLANG, get_platform
+from broma_ida.utils import HAS_IDACLANG, IDAUtils
 
 
 @dataclass
@@ -30,7 +30,11 @@ class Binding:
 
         return Binding(
             func.name, class_name,
-            int(f.binds.platforms_as_dict().get(get_platform(), "-0x1"), 16),
+            int(
+                f.binds.platforms_as_dict().get(
+                    IDAUtils.get_platform(), "-0x1"
+                ), 16
+            ),
             RetType(func.ret.name.replace("gd::", "std::")),
             [
                 ArgType(arg_t.name.replace("gd::", "std::"), name)

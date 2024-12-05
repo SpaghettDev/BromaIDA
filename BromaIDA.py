@@ -1,5 +1,5 @@
 # flake8-in-file-ignores: noqa: E402
-VERSION = "6.1.0"
+VERSION = "6.2.1"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"
@@ -14,10 +14,7 @@ from idaapi import (
 from ida_kernwin import ask_file
 from idautils import Names
 
-from broma_ida.utils import (
-    stop, get_platform, get_platform_printable, path_exists,
-    IDAUtils
-)
+from broma_ida.utils import stop, path_exists, IDAUtils
 from broma_ida.broma.importer import BromaImporter
 from broma_ida.broma.exporter import BromaExporter
 from broma_ida.ida_ctx_entry import IDACtxEntry
@@ -37,15 +34,14 @@ def on_import(form: MainForm, code: int = 0):
         SimplePopup("Please select a valid file!", "Cancel").show()
         stop()
 
-    platform = get_platform()
-    broma_importer = BromaImporter(platform, file_path)
+    broma_importer = BromaImporter(IDAUtils.get_platform(), file_path)
     broma_importer.parse_file()
     broma_importer.import_into_idb()
 
     print("[+] BromaIDA: Finished importing bindings from Broma file")
     SimplePopup(
         "Finished importing "
-        f"{get_platform_printable(platform)} "
+        f"{IDAUtils.get_platform_printable()} "
         "bindings from Broma file.",
         "OK"
     ).show()
@@ -56,7 +52,7 @@ def on_import(form: MainForm, code: int = 0):
 def on_export(form: MainForm, code: int = 0):
     form.Close(1)
 
-    platform = get_platform()
+    platform = IDAUtils.get_platform()
 
     if platform.startswith("android"):
         SimplePopup(
@@ -97,7 +93,7 @@ def bida_main():
 
     form_code = MainForm(
         VERSION,
-        get_platform_printable(get_platform()),
+        IDAUtils.get_platform_printable(),
         on_import,
         on_export
     ).show()

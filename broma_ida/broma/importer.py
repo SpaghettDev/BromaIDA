@@ -30,12 +30,7 @@ from pybroma import Root, Class
 from broma_ida.broma.constants import BROMA_PLATFORMS
 from broma_ida.broma.binding import Binding
 from broma_ida.broma.codegen import BromaCodegen
-from broma_ida.utils import (
-    IDAUtils,
-    get_platform_printable,
-    path_exists, stop,
-    HAS_IDACLANG
-)
+from broma_ida.utils import path_exists, stop, IDAUtils, HAS_IDACLANG
 
 from broma_ida.data.data_manager import DataManager
 
@@ -109,6 +104,9 @@ class BIUtils:
         Returns:
             bool: True on success
         """
+        if DataManager().get("ignore_mismatched_structs"):
+            return True
+
         holy_shit_struct = BIUtils.get_type_info("holy_shit")
 
         if holy_shit_struct:
@@ -428,6 +426,17 @@ class BromaImporter:
                 "last_broma_info", (self._target_platform, "")
             )
 
+            # Python>local_t_tree = ida_dirtree.get_std_dirtree(
+            #   ida_dirtree.DIRTREE_LOCAL_TYPES
+            # )
+            # Python>local_t_tree.mkdir("test")
+            # Python>local_t_tree.chdir("test")
+            # 0x2
+            # Python>local_t_tree.getcwd()
+            # '/test'
+            # Python>local_t_tree.link("_GUID")
+            # 0x0
+
             if last_broma_info[0] == self._target_platform and \
                     last_broma_info[1] != "":
                 if last_broma_info[1] == cur_hash:
@@ -594,7 +603,7 @@ class BromaImporter:
 
         print(
             f"\n\n[+] BromaImporter: Read {len(self.bindings)} "
-            f"{get_platform_printable(self._target_platform)} bindings "
+            f"{IDAUtils.get_platform_printable()} bindings "
             f"and {len(self.duplicates)} duplicates "
             f"from {self._file_path}\n\n"
         )

@@ -27,7 +27,7 @@
 	Modified by SpaghettDev
  ****************************************************************************/
 
-// based on geode-sdk/geode#e5dd2c9c40a6579b3b00cd1d3148353b4970af80
+// based on geode-sdk/geode#38f3385c90b4df3e39e6c9c9aadd267a98b0a7fa
 
 #include <cstdint>
 #include <climits>
@@ -861,6 +861,102 @@ namespace cocos2d
 		kCCProgressTimerTypeBar,
 	} CCProgressTimerType;
 
+	enum
+	{
+		CCControlEventTouchDown           = 1 << 0,    // A touch-down event in the control.
+		CCControlEventTouchDragInside     = 1 << 1,    // An event where a finger is dragged inside the bounds of the control.
+		CCControlEventTouchDragOutside    = 1 << 2,    // An event where a finger is dragged just outside the bounds of the control. 
+		CCControlEventTouchDragEnter      = 1 << 3,    // An event where a finger is dragged into the bounds of the control.
+		CCControlEventTouchDragExit       = 1 << 4,    // An event where a finger is dragged from within a control to outside its bounds.
+		CCControlEventTouchUpInside       = 1 << 5,    // A touch-up event in the control where the finger is inside the bounds of the control. 
+		CCControlEventTouchUpOutside      = 1 << 6,    // A touch-up event in the control where the finger is outside the bounds of the control.
+		CCControlEventTouchCancel         = 1 << 7,    // A system event canceling the current touches for the control.
+		CCControlEventValueChanged        = 1 << 8      // A touch dragging or otherwise manipulating a control, causing it to emit a series of different values.
+	};
+	typedef unsigned int CCControlEvent;
+
+	enum 
+	{
+		CCControlStateNormal       = 1 << 0, // The normal, or default state of a control��that is, enabled but neither selected nor highlighted.
+		CCControlStateHighlighted  = 1 << 1, // Highlighted state of a control. A control enters this state when a touch down, drag inside or drag enter is performed. You can retrieve and set this value through the highlighted property.
+		CCControlStateDisabled     = 1 << 2, // Disabled state of a control. This state indicates that the control is currently disabled. You can retrieve and set this value through the enabled property.
+		CCControlStateSelected     = 1 << 3  // Selected state of a control. This state indicates that the control is currently selected. You can retrieve and set this value through the selected property.
+	};
+	typedef unsigned int CCControlState;
+
+	typedef enum LanguageType
+	{
+		kLanguageEnglish = 0,
+		kLanguageChinese,
+		kLanguageFrench,
+		kLanguageItalian,
+		kLanguageGerman,
+		kLanguageSpanish,
+		kLanguageDutch,
+		kLanguageRussian,
+		kLanguageKorean,
+		kLanguageJapanese,
+		kLanguageHungarian,
+		kLanguagePortuguese,
+		kLanguageArabic
+	} ccLanguageType;
+
+	enum TargetPlatform
+	{
+		kTargetWindows,
+		kTargetLinux,
+		kTargetMacOS,
+		kTargetAndroid,
+		kTargetIphone,
+		kTargetIpad,
+		kTargetBlackBerry,
+		kTargetNaCl,
+		kTargetEmscripten,
+		kTargetTizen,
+		kTargetWinRT,
+		kTargetWP8
+	};
+
+	enum ccTouchType {
+		CCTOUCHBEGAN = 0,
+		CCTOUCHMOVED = 1,
+		CCTOUCHENDED = 2,
+		CCTOUCHCANCELLED = 3,
+		
+		ccTouchMax = 4,
+	};
+
+	enum ResolutionPolicy
+	{
+		// The entire application is visible in the specified area without trying to preserve the original aspect ratio.
+		// Distortion can occur, and the application may appear stretched or compressed.
+		kResolutionExactFit,
+		// The entire application fills the specified area, without distortion but possibly with some cropping,
+		// while maintaining the original aspect ratio of the application.
+		kResolutionNoBorder,
+		// The entire application is visible in the specified area without distortion while maintaining the original
+		// aspect ratio of the application. Borders can appear on two sides of the application.
+		kResolutionShowAll,
+		// The application takes the height of the design resolution size and modifies the width of the internal
+		// canvas so that it fits the aspect ratio of the device
+		// no distortion will occur however you must make sure your application works on different
+		// aspect ratios
+		kResolutionFixedHeight,
+		// The application takes the width of the design resolution size and modifies the height of the internal
+		// canvas so that it fits the aspect ratio of the device
+		// no distortion will occur however you must make sure your application works on different
+		// aspect ratios
+		kResolutionFixedWidth,
+
+		kResolutionUnKnown,
+	};
+
+	typedef enum {
+		// the back key clicked msg
+		kTypeBackClicked = 1,
+		kTypeMenuClicked,
+	} ccKeypadMSGType;
+
 
 	// structs
 	struct _listEntry;
@@ -1056,79 +1152,12 @@ namespace cocos2d
 		ccV3F_C4B_T2F    br;
 	} ccV3F_C4B_T2F_Quad;
 
-	typedef enum LanguageType
+	typedef struct
 	{
-		kLanguageEnglish = 0,
-		kLanguageChinese,
-		kLanguageFrench,
-		kLanguageItalian,
-		kLanguageGerman,
-		kLanguageSpanish,
-		kLanguageDutch,
-		kLanguageRussian,
-		kLanguageKorean,
-		kLanguageJapanese,
-		kLanguageHungarian,
-		kLanguagePortuguese,
-		kLanguageArabic
-	} ccLanguageType;
-
-	enum TargetPlatform
-	{
-		kTargetWindows,
-		kTargetLinux,
-		kTargetMacOS,
-		kTargetAndroid,
-		kTargetIphone,
-		kTargetIpad,
-		kTargetBlackBerry,
-		kTargetNaCl,
-		kTargetEmscripten,
-		kTargetTizen,
-		kTargetWinRT,
-		kTargetWP8
-	};
-
-	enum ccTouchType {
-		CCTOUCHBEGAN = 0,
-		CCTOUCHMOVED = 1,
-		CCTOUCHENDED = 2,
-		CCTOUCHCANCELLED = 3,
-		
-		ccTouchMax = 4,
-	};
-
-	enum ResolutionPolicy
-	{
-		// The entire application is visible in the specified area without trying to preserve the original aspect ratio.
-		// Distortion can occur, and the application may appear stretched or compressed.
-		kResolutionExactFit,
-		// The entire application fills the specified area, without distortion but possibly with some cropping,
-		// while maintaining the original aspect ratio of the application.
-		kResolutionNoBorder,
-		// The entire application is visible in the specified area without distortion while maintaining the original
-		// aspect ratio of the application. Borders can appear on two sides of the application.
-		kResolutionShowAll,
-		// The application takes the height of the design resolution size and modifies the width of the internal
-		// canvas so that it fits the aspect ratio of the device
-		// no distortion will occur however you must make sure your application works on different
-		// aspect ratios
-		kResolutionFixedHeight,
-		// The application takes the width of the design resolution size and modifies the height of the internal
-		// canvas so that it fits the aspect ratio of the device
-		// no distortion will occur however you must make sure your application works on different
-		// aspect ratios
-		kResolutionFixedWidth,
-
-		kResolutionUnKnown,
-	};
-
-	typedef enum {
-		// the back key clicked msg
-		kTypeBackClicked = 1,
-		kTypeMenuClicked,
-	} ccKeypadMSGType;
-
+		double h;       // angle in degrees
+		double s;       // percent
+		double v;       // percent
+	} HSV;
 
 	struct  cc_timeval
 	{
@@ -1242,6 +1271,7 @@ namespace cocos2d
 	typedef void (CCObject::*SEL_MenuHandler)(CCObject*);
 	typedef void (CCObject::*SEL_EventHandler)(CCEvent*);
 	typedef int (CCObject::*SEL_Compare)(CCObject*);
+	typedef void (CCObject::*SEL_CCControlHandler)(CCObject*, CCControlEvent);
 
 	typedef long long (*CUSTOM_WND_PROC)(unsigned int message, unsigned long long wParam, long long lParam, int* pProcessed);
 
@@ -1578,6 +1608,8 @@ namespace cocos2d
 
 	public:
 		ccArray* data;
+		CCArray();
+		CCArray(unsigned int capacity);
 	};
 
 
@@ -1631,7 +1663,6 @@ namespace cocos2d
 		CCArray* allKeysForObject(CCObject* object);
 
 		CCObject* objectForKey(const std::string& key);
-
 		CCObject* objectForKey(intptr_t key);
 		
 		const CCString* valueForKey(const std::string& key);
@@ -1639,17 +1670,12 @@ namespace cocos2d
 		const CCString* valueForKey(intptr_t key);
 
 		void setObject(CCObject* pObject, const std::string& key);
-
 		void setObject(CCObject* pObject, intptr_t key);
 
 		void removeObjectForKey(const std::string& key);
-
 		void removeObjectForKey(intptr_t key);
-
 		void removeObjectsForKeys(CCArray* pKeyArray);
-
 		void removeObjectForElememt(CCDictElement* pElement);
-
 		void removeAllObjects();
 
 		virtual CCObject* copyWithZone(CCZone* pZone);
@@ -6111,6 +6137,196 @@ namespace cocos2d
 		{
 		public:
 			virtual void colorValueChanged(ccColor3B) {}
+		};
+
+
+		class CCInvocation : public CCObject
+		{
+			CC_SYNTHESIZE_READONLY(SEL_CCControlHandler, m_action, Action);
+			CC_SYNTHESIZE_READONLY(CCObject*, m_target, Target);
+			CC_SYNTHESIZE_READONLY(CCControlEvent, m_controlEvent, ControlEvent);
+			
+		public:
+			static CCInvocation* create(CCObject* target, SEL_CCControlHandler action, CCControlEvent controlEvent);
+			CCInvocation(CCObject* target, SEL_CCControlHandler action, CCControlEvent controlEvent);
+
+			void invoke(CCObject* sender);
+		};
+
+		class CCControl : public CCLayerRGBA
+		{
+			//CCRGBAProtocol
+			bool m_bIsOpacityModifyRGB;
+
+			/** The current control state constant. 
+			* @note Robtop Addition: Made non virtual
+			*/
+			CC_SYNTHESIZE_READONLY_NV(CCControlState, m_eState, State);
+
+			/** True if all of the controls parents are visible */
+		protected:
+			bool m_hasVisibleParents;
+
+		public:
+			virtual void setEnabled(bool bEnabled);
+			virtual bool isEnabled();
+			virtual void setSelected(bool bSelected);
+			virtual bool isSelected();
+			virtual void setHighlighted(bool bHighlighted);
+			virtual bool isHighlighted();
+			bool hasVisibleParents();
+			virtual void needsLayout();
+			
+			virtual bool isOpacityModifyRGB();
+			virtual void setOpacityModifyRGB(bool bOpacityModifyRGB);
+
+		protected:
+			bool m_bEnabled;
+			bool m_bSelected;
+			bool m_bHighlighted;
+
+			CCDictionary* m_pDispatchTable;
+
+		public:
+			CCControl();
+			
+			virtual bool init(void);
+			virtual ~CCControl();
+
+			virtual void onEnter();
+			virtual void onExit();
+			virtual void registerWithTouchDispatcher();
+
+			virtual void sendActionsForControlEvents(CCControlEvent controlEvents);
+
+			virtual void addTargetWithActionForControlEvents(CCObject* target, SEL_CCControlHandler action, CCControlEvent controlEvents);
+
+			virtual void removeTargetWithActionForControlEvents(CCObject* target, SEL_CCControlHandler action, CCControlEvent controlEvents);
+
+			virtual CCPoint getTouchLocation(CCTouch* touch);
+
+			virtual bool isTouchInside(CCTouch * touch);
+
+		protected:
+			CCInvocation* invocationWithTargetAndActionForControlEvent(CCObject* target, SEL_CCControlHandler action, CCControlEvent controlEvent);
+
+			CCArray* dispatchListforControlEvent(CCControlEvent controlEvent);
+			void addTargetWithActionForControlEvent(CCObject* target, SEL_CCControlHandler action, CCControlEvent controlEvent);
+
+			void removeTargetWithActionForControlEvent(CCObject* target, SEL_CCControlHandler action, CCControlEvent controlEvent);
+
+			static CCControl* create();
+
+		public:
+			void addHandleOfControlEvent(int nFunID,CCControlEvent controlEvent);
+			void removeHandleOfControlEvent(CCControlEvent controlEvent);
+
+		private:
+			int getHandleOfControlEvent(CCControlEvent controlEvent);
+
+		private:
+			std::map<int,int> m_mapHandleOfControlEvent;
+		};
+
+		class CCControlSaturationBrightnessPicker : public CCControl
+		{
+			CC_SYNTHESIZE_READONLY(float, m_saturation, Saturation);
+			CC_SYNTHESIZE_READONLY(float, m_brightness, Brightness);
+
+			CC_SYNTHESIZE_READONLY(CCSprite*, m_background, Background);
+			CC_SYNTHESIZE_READONLY(CCSprite*, m_overlay, Overlay);
+			CC_SYNTHESIZE_READONLY(CCSprite*, m_shadow, Shadow);
+			CC_SYNTHESIZE_READONLY(CCSprite*, m_slider, Slider);
+			CC_SYNTHESIZE_READONLY(CCPoint, m_startPos, StartPos);
+
+		protected:
+			int         boxPos;
+			int         boxSize;
+			
+		public:
+			CCControlSaturationBrightnessPicker();
+			virtual ~CCControlSaturationBrightnessPicker();
+			virtual bool initWithTargetAndPos(CCNode* target, CCPoint pos);
+
+			static CCControlSaturationBrightnessPicker* create(CCNode* target, CCPoint pos);
+
+			virtual void setEnabled(bool enabled);
+			virtual void updateWithHSV(HSV hsv);
+			virtual void updateDraggerWithHSV(HSV hsv);
+
+		protected:    
+			void updateSliderPosition(CCPoint location);
+			bool checkSliderPosition(CCPoint location);
+
+			virtual bool ccTouchBegan(CCTouch* touch, CCEvent* pEvent);
+			virtual void ccTouchMoved(CCTouch *pTouch, CCEvent *pEvent);
+		};
+
+		class CCControlHuePicker : public CCControl
+		{
+			CC_SYNTHESIZE_READONLY(float, m_hue, Hue);
+			virtual void setHue(float val);
+			CC_SYNTHESIZE_READONLY(float, m_huePercentage, HuePercentage);
+			virtual void setHuePercentage(float val);
+
+			CC_SYNTHESIZE_RETAIN(CCSprite*, m_background, Background);
+			CC_SYNTHESIZE_RETAIN(CCSprite*, m_slider, Slider);
+			CC_SYNTHESIZE_READONLY(CCPoint, m_startPos, StartPos);
+
+		public:
+			CCControlHuePicker();
+			virtual ~CCControlHuePicker();
+			virtual bool initWithTargetAndPos(CCNode* target, CCPoint pos);
+
+			static CCControlHuePicker* create(CCNode* target, CCPoint pos);
+			virtual void setEnabled(bool enabled);
+
+		protected:    
+			void updateSliderPosition(CCPoint location);
+			bool checkSliderPosition(CCPoint location);
+
+			virtual bool ccTouchBegan(CCTouch* touch, CCEvent* pEvent);
+			virtual void ccTouchMoved(CCTouch *pTouch, CCEvent *pEvent);
+		};
+
+		class CCControlColourPicker : public CCControl
+		{	
+		public:
+			// @note RobTop Addition
+			ccColor3B const& getColorValue() const;
+			// @note RobTop Addition
+			virtual void setColorValue(ccColor3B const&);
+
+			CCControlColourPicker();
+			virtual ~CCControlColourPicker();
+
+		protected:
+			// @note RobTop Addition
+			ccColor3B m_rgb;
+			HSV m_hsv;
+			CC_SYNTHESIZE_RETAIN(CCControlSaturationBrightnessPicker*, m_colourPicker, colourPicker)
+			
+			CC_SYNTHESIZE_RETAIN(CCControlHuePicker*, m_huePicker, HuePicker)
+			CC_SYNTHESIZE_RETAIN(CCSprite*, m_background, Background)
+
+			// @note RobTop Addition
+			CC_SYNTHESIZE_NV(CCSprite*, m_colorTarget, ColorTarget)
+			// @note RobTop Addition
+			CC_SYNTHESIZE_NV(ColorPickerDelegate*, m_delegate, Delegate)
+			
+			
+		public:
+			// @note RobTop Addition: renamed create to colourPicker
+			static CCControlColourPicker* colourPicker();
+
+			virtual bool init();
+			void hueSliderValueChanged(CCObject* sender, CCControlEvent controlEvent);
+			void colourSliderValueChanged(CCObject* sender, CCControlEvent controlEvent);
+
+		protected:    
+			void updateControlPicker();
+			void updateHueAndControlPicker();
+			virtual bool ccTouchBegan(CCTouch* touch, CCEvent* pEvent);
 		};
 	}
 }

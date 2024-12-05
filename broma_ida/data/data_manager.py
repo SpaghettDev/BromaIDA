@@ -33,6 +33,7 @@ class DataManager:
         self.get("use_custom_android_gnustl", False)
         self.get("use_custom_mac_gnustl", False)
         self.get("set_default_parser_args", True)
+        self.get("ignore_mismatched_structs", False)
 
         self.get("msvcstl_dir", "")
         self.get("android_gnustl_dir", "")
@@ -98,6 +99,13 @@ class DataManager:
             value (Any)
         """
         self.__shelf[key] = value
+
+    # def register_idb(self, idb_hash: str, ) -> None:
+    #     """_summary_
+
+    #     Args:
+    #         idb_hash (str): _description_
+    #     """
 
     def close(self):
         """Closes the DataManager. Saves everything to the shelf."""

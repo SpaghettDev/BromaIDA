@@ -17,6 +17,7 @@ class SettingsForm(DynamicForm):
 
     rImportTypes: Form.ChkGroupItemControl
     rSetDefaultParserArguments: Form.ChkGroupItemControl
+    rIgnoreMismatchedStructs: Form.ChkGroupItemControl
     rUseCustomAndroidGNUSTL: Form.ChkGroupItemControl
     rUseCustomMacGNUSTL: Form.ChkGroupItemControl
 
@@ -39,6 +40,7 @@ BromaIDA
 
 <##                                                                 Import Types Settings#Enables importing of GD and cocos2d classes when importing a Broma file#Import Types:{rImportTypes}>
 <#Sets idaclang's parser arguments to suit the current binary's platform#Set Default Parser Parameters:{rSetDefaultParserArguments}>
+<#Disable checking if STL & Cocos structs already exist. (Not Recommended)#Ignore mismatched structs:{rIgnoreMismatchedStructs}>
 <#Enable this ONLY if you have genuine Android GNU STL headers#Use Custom Android GNU STL:{rUseCustomAndroidGNUSTL}>
 <#Enable this ONLY if you have genuine Mac GNU STL headers#Use Custom Mac GNU STL:{rUseCustomMacGNUSTL}>{cImportTypesSettingsGroup}>
 <#Select MSVC STL Directory. Used for Windows binary.\nIf you dont have custom GNU STL set and the binary's platform is not Windows,\nBromaIDA will use this instead with platform specfic modifications#MSVC STL Directory       :{iMSVCSTLDir}>
@@ -55,7 +57,8 @@ BromaIDA
             )),
             "cImportTypesSettingsGroup": Form.ChkGroupControl((
                 "rImportTypes", "rSetDefaultParserArguments",
-                "rUseCustomAndroidGNUSTL", "rUseCustomMacGNUSTL"
+                "rIgnoreMismatchedStructs",
+                "rUseCustomAndroidGNUSTL", "rUseCustomMacGNUSTL",
             )),
             "iMSVCSTLDir": Form.DirInput(swidth=25),
             "iAndroidGNUSTLDir": Form.DirInput(swidth=25),
@@ -85,6 +88,9 @@ BromaIDA
         self.rImportTypes.checked = DataManager().get("import_types")
         self.rSetDefaultParserArguments.checked = DataManager().get(
             "set_default_parser_args"
+        )
+        self.rIgnoreMismatchedStructs.checked = DataManager().get(
+            "ignore_mismatched_structs"
         )
         self.rUseCustomAndroidGNUSTL.checked = DataManager().get(
             "use_custom_android_gnustl"
@@ -141,6 +147,7 @@ BromaIDA
         # Import Types Settings
         if fid in [
             self.rImportTypes.id, self.rSetDefaultParserArguments.id,
+            self.rIgnoreMismatchedStructs.id,
             self.rUseCustomAndroidGNUSTL.id, self.rUseCustomMacGNUSTL.id
         ]:
             if fid == self.rImportTypes.id:
@@ -152,6 +159,11 @@ BromaIDA
                 DataManager().set(
                     "set_default_parser_args",
                     bool(self.GetControlValue(self.rSetDefaultParserArguments))
+                )
+            elif fid == self.rIgnoreMismatchedStructs.id:
+                DataManager().get(
+                    "ignore_mismatched_structs",
+                    bool(self.GetControlValue(self.rIgnoreMismatchedStructs))
                 )
             elif fid == self.rUseCustomAndroidGNUSTL.id:
                 DataManager().set(
