@@ -55,10 +55,10 @@ Parses a Broma file and exports the bindings into a Broma file/imports the bindi
      2. Your header path should be `C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\include`
   - For Android binaries (Android 64 and 32 bit)
      1. First get gcc-arm-none-linux-gnueabihf (i did so by using scoop; `scoop install extras/gcc-arm-none-linux-gnueabihf`)
-     2. Your header path should be `C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\arm-none-linux-gnueabihf\include\c++\13.3.1;C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\arm-none-linux-gnueabihf\include\c++\13.3.1\arm-none-linux-gnueabihf;C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\arm-none-linux-gnueabihf\libc\usr\include;C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\lib\gcc\arm-none-linux-gnueabihf\13.3.1\include` (be sure to replace YOUR_NAME with your windows username)
+     2. Your header path should be `C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\arm-none-linux-gnueabihf\include\c++\13.3.1;` (be sure to replace YOUR_NAME with your windows username)
   - For MacOS (Intel and M1 Mac) and iOS binaries
      1. First get gcc (i did so by using scoop; `scoop install gcc`)
-     2. Your header path should be `C:\Users\YOUR_NAME\scoop\apps\gcc\current\include\c++\13.2.0;C:\Users\YOUR_NAME\scoop\apps\gcc\current\include\c++\13.2.0\x86_64-w64-mingw32;C:\Users\YOUR_NAME\scoop\apps\gcc\current\x86_64-w64-mingw32\include` (be sure to replace YOUR_NAME with your windows username)
+     2. Your header path should be `C:\Users\YOUR_NAME\scoop\apps\gcc\current\include\c++\13.2.0` (be sure to replace YOUR_NAME with your windows username)
 
 1. Launch the BromaIDA plugin using Ctrl-Shift-B, or from the Top Bar (Edit -> Plugins -> BromaIDA)
 2. Click on the Settings button
@@ -67,6 +67,9 @@ Parses a Broma file and exports the bindings into a Broma file/imports the bindi
    - If you **_aren't_** using custom GNU STL, be sure to **uncheck** "Use Custom [Android/Mac] GNU STL".
    - If you **_are_** using custom GNU STL, be sure to **check** "Use Custom [Android/Mac] GNU STL", otherwise you won't be able to select the custom GNU STL path.
 4. Exit out of the settings window
+
+> [!NOTE]
+> If using MSVC STL Headers on non-Windows binaries, see [MSVC STL on Non-Windows](#msvc-stl-on-non-windows)
 
 Start the script and the plugin will handle everything :)
 
@@ -79,6 +82,13 @@ Here you will find some options you can set, such as importing types, settings d
 The options you chose will be saved into a [shelf](https://docs.python.org/3/library/shelve.html) stored in the `IDA_DIRECTORY/plugins/broma_ida` folder.
 
 ![BromaIDA Settings](assets/settings.png)
+
+## MSVC STL on non-Windows
+
+If you are importing types using the MSVC STL on non-Windows binaries, you should:
+
+1. Disable "Set Default Parser Parameters" in Import Types Settings.
+2. Set the Windows preset for the parser. (Top Bar: Options -> Compiler -> Arguments -> Click on "Presets..." -> Choose "Windows").
 
 ## Utilities
 

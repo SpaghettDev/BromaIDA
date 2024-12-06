@@ -161,7 +161,7 @@ BromaIDA
                     bool(self.GetControlValue(self.rSetDefaultParserArguments))
                 )
             elif fid == self.rIgnoreMismatchedStructs.id:
-                DataManager().get(
+                DataManager().set(
                     "ignore_mismatched_structs",
                     bool(self.GetControlValue(self.rIgnoreMismatchedStructs))
                 )
