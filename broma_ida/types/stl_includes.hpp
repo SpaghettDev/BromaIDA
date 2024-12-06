@@ -188,6 +188,16 @@ struct custom_less : std::less<T>
 	bool pad;
 };
 
+#if BROMAIDA_IS_PLATFORM_ANDROID
+namespace stl
+{
+	struct _bit_iterator {
+		std::uintptr_t* m_bitptr;
+		unsigned int m_offset;
+	};
+}
+#endif
+
 namespace std
 {
 	// providing custom specializations for standard library templates is
@@ -216,12 +226,20 @@ namespace std
 
 #if BROMAIDA_IS_PLATFORM_ANDROID
 	template <>
-	class vector<bool, allocator<bool>>
-	{
-		_Bit_iterator _M_start;
-		_Bit_iterator _M_finish;
-		_Bit_type* _M_end_of_storage;
+	class vector<bool> {
+	protected:
+		stl::_bit_iterator m_start;
+		stl::_bit_iterator m_end;
+		std::uintptr_t* m_capacity_end;
 	};
+
+	// template <>
+	// class vector<bool, allocator<bool>>
+	// {
+	// 	_Bit_iterator _M_start;
+	// 	_Bit_iterator _M_finish;
+	// 	_Bit_type* _M_end_of_storage;
+	// };
 #elif BROMAIDA_IS_PLATFORM_MACHO
 	template <>
 	class vector<bool, allocator<bool>>

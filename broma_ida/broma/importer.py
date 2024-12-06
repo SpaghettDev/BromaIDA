@@ -320,9 +320,16 @@ class BIUtils:
             if "const" in binding.parameters[idx].type:
                 stl_type.set_const()
 
-            function_data[
-                idx + (0 if binding.is_static else 1)
-            ].type = stl_type
+            try:
+                function_data[
+                    idx + (0 if binding.is_static else 1)
+                ].type = stl_type
+            except IndexError:
+                ida_warning(
+                    "Couldn't fix STL parameters for "
+                    f"""function {binding.qualified_name}!""",
+                )
+                return
 
         if ret_has_stl_type:
             stl_type = ida_tinfo_t()
