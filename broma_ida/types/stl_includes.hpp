@@ -1,23 +1,6 @@
 // custom gnustl taken from: https://github.com/geode-sdk/geode/blob/main/loader/include/Geode/c++stl/string.hpp
 
-#if !BROMAIDA_USE_CUSTOM_GNUSTL
-
-#include <utility> // IWYU pragma: keep
-#include <string> // IWYU pragma: keep
-#include <vector> // IWYU pragma: keep
-#include <map> // IWYU pragma: keep
-#include <unordered_map> // IWYU pragma: keep
-#include <set> // IWYU pragma: keep
-#include <unordered_set> // IWYU pragma: keep
-
-#else
-
 #include <cstdint>
-#include <cstddef>
-
-#if BROMAIDA_IS_PLATFORM_ANDROID
-using va_list = char*;
-#endif
 
 namespace stl
 {
@@ -64,6 +47,26 @@ namespace stl
 	};
 }
 
+#if !BROMAIDA_USE_CUSTOM_GNUSTL
+
+#include <utility> // IWYU pragma: keep
+#include <vector> // IWYU pragma: keep
+#include <map> // IWYU pragma: keep
+#include <unordered_map> // IWYU pragma: keep
+#include <set> // IWYU pragma: keep
+#include <unordered_set> // IWYU pragma: keep
+
+#if !BROMAIDA_IS_PLATFORM_ANDROID
+#include <string> // IWYU pragma: keep
+#endif
+
+#else
+
+#include <cstddef>
+
+#if BROMAIDA_IS_PLATFORM_ANDROID
+using va_list = char*;
+#endif
 
 namespace std
 {
@@ -188,20 +191,11 @@ struct custom_less : std::less<T>
 	bool pad;
 };
 
-#if BROMAIDA_IS_PLATFORM_ANDROID
-namespace stl
-{
-	struct _bit_iterator {
-		std::uintptr_t* m_bitptr;
-		unsigned int m_offset;
-	};
-}
-#endif
-
 namespace std
 {
 	// providing custom specializations for standard library templates is
 	// technically UB but clang allows it
+
 	template <typename Key, typename T, typename Alloc>
 	class map<Key, T, less<Key>, Alloc> : public map<Key, T, custom_less<Key>, Alloc> {};
 
@@ -226,28 +220,33 @@ namespace std
 
 #if BROMAIDA_IS_PLATFORM_ANDROID
 	template <>
-	class vector<bool> {
-	protected:
-		stl::_bit_iterator m_start;
-		stl::_bit_iterator m_end;
-		std::uintptr_t* m_capacity_end;
-	};
-
-	// template <>
-	// class vector<bool, allocator<bool>>
-	// {
-	// 	_Bit_iterator _M_start;
-	// 	_Bit_iterator _M_finish;
-	// 	_Bit_type* _M_end_of_storage;
-	// };
-#elif BROMAIDA_IS_PLATFORM_MACHO
-	template <>
 	class vector<bool, allocator<bool>>
 	{
-		bool* _M_start;
-		bool* _M_finish;
-		bool* _M_end_of_storage;
+		stl::_bit_iterator _M_start;
+		stl::_bit_iterator _M_finish;
+		void* _M_end_of_storage;
 	};
+
+
+	template <typename Char>
+	class char_traits {};
+
+	template <typename Char, typename Traits, typename Allocator>
+	class basic_string
+	{
+	public:
+		basic_string() {}
+		basic_string(const Char*) {}
+
+		const Char* c_str() const;
+		std::size_t size();
+
+	private:
+		stl::StringData m_data;
+		// friend stl::StringImpl;
+	};
+
+	using string = basic_string<char, char_traits<char>, allocator<char>>;
 #endif
 }
 
