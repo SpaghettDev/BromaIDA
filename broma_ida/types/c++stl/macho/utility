@@ -1,0 +1,17 @@
+#pragma once
+
+namespace std
+{
+	template <class _T1, class _T2>
+	struct pair
+	#if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
+	: private __non_trivially_copyable_base<_T1, _T2>
+	#endif
+	{
+		typedef _T1 first_type;
+		typedef _T2 second_type;
+
+		_T1 first;
+		_T2 second;
+	};
+}

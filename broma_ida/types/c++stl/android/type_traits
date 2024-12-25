@@ -1,0 +1,147 @@
+#pragma once
+
+#include "cstddef"
+
+#define _GNUSTL_TRAITS_IS_TYPE(name, type) \
+	template <typename T> struct name : public false_type {}; \
+	template <> struct name<type> : public true_type {}; \
+	template <typename T> inline constexpr bool name ## _v = name<T>::value
+
+#define _GNUSTL_TRAITS_HAS_PROPERTY(name, ev) \
+	template <typename T> struct name : public integral_constant<bool, ev(T)> {}; \
+	template <typename T> inline constexpr bool name ## _v = ev(T);
+
+
+namespace stl
+{
+	template <class _Tp>
+	struct __type_identity { typedef _Tp type; };
+	template <class _Tp>
+	using __type_identity_t = typename __type_identity<_Tp>::type;
+
+	template<class T>
+	auto try_add_rvalue_reference(int) -> __type_identity<T&&>;
+	template<class T>
+	auto try_add_rvalue_reference(...) -> __type_identity<T>;	
+}
+
+namespace std
+{
+	template <class...>
+	using __void_t = void;
+
+	
+	template <class _Tp> struct remove_reference        { using type = _Tp; };
+	template <class _Tp> struct remove_reference<_Tp&>  { using type = _Tp; };
+	template <class _Tp> struct remove_reference<_Tp&&> { using type = _Tp; };
+	
+	template <class _Tp>
+	using remove_reference_t = typename remove_reference<_Tp>::type;
+
+
+	template<class T>
+	struct add_rvalue_reference
+		: decltype(stl::try_add_rvalue_reference<T>(0)) {};
+
+	template<typename T>
+	typename add_rvalue_reference<T>::type declval() noexcept
+	{ static_assert(false, "declval not allowed in an evaluated context"); }
+
+	
+	template<class _Tp> struct type_identity { typedef _Tp type; };
+	template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
+
+
+	template<std::size_t _Len, std::size_t _Align>
+	struct aligned_storage
+	{ 
+		union type
+		{
+			unsigned char __data[_Len];
+			struct __attribute__((__aligned__((_Align)))) { } __align; 
+		};
+	};
+	
+	
+	template <class _Ty, _Ty _Val>
+	struct integral_constant {
+		static constexpr _Ty value = _Val;
+		
+		using value_type = _Ty;
+		using type       = integral_constant;
+		
+		constexpr operator value_type() const noexcept {
+			return value;
+		}
+	};
+	
+
+	template<typename _Tp>
+	struct alignment_of
+		: public integral_constant<std::size_t, __alignof__(_Tp)> { };
+
+
+	template <typename T>
+	using __not_ = std::integral_constant<bool, !T::value>;
+
+	template <bool _Val>
+	using bool_constant = integral_constant<bool, _Val>;
+
+	using true_type  = bool_constant<true>;
+	using false_type = bool_constant<false>;
+
+
+	template<bool B, class T, class F>
+	struct conditional { using type = T; };
+	
+	template<class T, class F>
+	struct conditional<false, T, F> { using type = F; };
+
+
+	template<class...>
+	struct conjunction : std::true_type {};
+	
+	template<class B1>
+	struct conjunction<B1> : B1 {};
+	
+	template<class B1, class... Bn>
+	struct conjunction<B1, Bn...>
+		: std::conditional<bool(B1::value), conjunction<Bn...>, B1>::type {};
+
+
+	template<class...>
+	struct disjunction : std::false_type {};
+
+	template<class B1>
+	struct disjunction<B1> : B1 {};
+
+	template<class B1, class... Bn>
+	struct disjunction<B1, Bn...>
+		: std::conditional<bool(B1::value), B1, disjunction<Bn...>>::type  {};
+
+
+	template<class T> struct is_lvalue_reference     : std::false_type {};
+	template<class T> struct is_lvalue_reference<T&> : std::true_type {};
+
+
+	_GNUSTL_TRAITS_IS_TYPE(is_void, void);
+
+	_GNUSTL_TRAITS_HAS_PROPERTY(is_empty, __is_empty);
+	_GNUSTL_TRAITS_HAS_PROPERTY(is_final, __is_final);
+	_GNUSTL_TRAITS_HAS_PROPERTY(is_enum, __is_enum);
+
+
+	template <typename T>
+	constexpr T&& forward(typename std::remove_reference<T>::type& t) noexcept {
+		return static_cast<T&&>(t);
+	}
+
+	template <typename T>
+	constexpr T&& forward(typename std::remove_reference<T>::type&& t) noexcept {
+		static_assert(!std::is_lvalue_reference<T>::value, "Cannot forward an rvalue as an lvalue");
+		return static_cast<T&&>(t);
+	}
+}
+
+#undef _GNUSTL_TRAITS_IS_TYPE
+#undef _GNUSTL_TRAITS_HAS_PROPERTY

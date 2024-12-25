@@ -29,9 +29,9 @@
 
 // based on geode-sdk/geode#38f3385c90b4df3e39e6c9c9aadd267a98b0a7fa
 
-#include <cstdint>
-#include <climits>
-#include <cctype>
+// #include <cstdint>
+// #include <climits>
+// #include <cctype>
 
 #include "stl_includes.hpp"
 
@@ -336,7 +336,7 @@ typedef struct UT_hash_table {
 	unsigned num_buckets, log2_num_buckets;
 	unsigned num_items;
 	struct UT_hash_handle *tail; /* tail hh in app order, for fast append    */
-	ptrdiff_t hho; /* hash handle offset (byte pos of hash handle in element */
+	std::ptrdiff_t hho; /* hash handle offset (byte pos of hash handle in element */
 
 	/* in an ideal situation (all buckets used equally), no bucket would have
 	* more than ceil(#items/#buckets) items. that's the ideal chain length. */
@@ -349,10 +349,10 @@ typedef struct UT_hash_table {
 
 	unsigned ineff_expands, noexpand;
 
-	uint32_t signature; /* used only to find hash tables in external analysis */
+	std::uint32_t signature; /* used only to find hash tables in external analysis */
 #ifdef HASH_BLOOM
-	uint32_t bloom_sig; /* used only to test bloom exists in external analysis */
-	uint8_t *bloom_bv;
+	std::uint32_t bloom_sig; /* used only to test bloom exists in external analysis */
+	std::uint8_t *bloom_bv;
 	char bloom_nbits;
 #endif
 
@@ -369,61 +369,8 @@ typedef struct UT_hash_handle {
    unsigned hashv;                   /* result of hash-fcn(key)        */
 } UT_hash_handle;
 
-// not in the other cocos2d namespace because they are used extensively
-// and i dont want to mix sections
-namespace cocos2d
-{
-	// CCGeometry
-	class CCPoint
-	{
-	public:
-		float x;
-		float y;
-
-		CCPoint()
-			: x(.0f), y(.0f)
-		{}
-
-		CCPoint(const CCPoint& p)
-			: x(p.x), y(p.y)
-		{};
-
-		CCPoint(float x, float y)
-			: x(x), y(y)
-		{};
-	};
-
-	class CCSize
-	{
-	public:
-		float width;
-		float height;
-
-		inline CCSize() : width(0), height(0) {}
-		inline CCSize(float width, float height) : width(width), height(height) {}
-	};
-
-	class CCRect
-	{
-	public:
-		CCPoint origin;
-		CCSize size;
-	};
-
-	typedef struct _ccColor3B
-	{
-		GLubyte r;
-		GLubyte g;
-		GLubyte b;
-	} ccColor3B;
-
-	static const ccColor3B ccWHITE = {255,255,255};
-	#define CCPointZero CCPointMake(0,0)
-
-	#define CCPointMake(x, y) cocos2d::CCPoint((float)(x), (float)(y))
-	#define CCSizeMake(width, height) cocos2d::CCSize((float)(width), (float)(height))
-	#define CCRectMake(x, y, width, height) cocos2d::CCRect((float)(x), (float)(y), (float)(width), (float)(height))
-}
+// not here because they are used extensively, and because they're used in stl_types.hpp
+#include "cocos2d_geometry.hpp"
 
 namespace cocos2d
 {
@@ -1618,7 +1565,7 @@ namespace cocos2d
 	{
 	private:
 		CCDictElement(const char* pszKey, CCObject* pObject);
-		CCDictElement(intptr_t iKey, CCObject* pObject);
+		CCDictElement(std::intptr_t iKey, CCObject* pObject);
 
 	public:
 		~CCDictElement();
@@ -1629,7 +1576,7 @@ namespace cocos2d
 			return m_szKey;
 		}
 
-		inline intptr_t getIntKey() const
+		inline std::intptr_t getIntKey() const
 		{
 			CCAssert(m_szKey[0] == '\0', "Should not call this function for string dictionary");
 			return m_iKey;
@@ -1643,7 +1590,7 @@ namespace cocos2d
 		// char array is needed for HASH_ADD_STR in UT_HASH.
 		// So it's a pain that all elements will allocate 256 bytes for this array.
 		char      m_szKey[MAX_KEY_LEN];     // hash key of string type
-		intptr_t  m_iKey;       // hash key of integer type
+		std::intptr_t  m_iKey;       // hash key of integer type
 		CCObject* m_pObject;    // hash value
 	public:
 		UT_hash_handle hh;      // makes this class hashable
@@ -1663,17 +1610,17 @@ namespace cocos2d
 		CCArray* allKeysForObject(CCObject* object);
 
 		CCObject* objectForKey(const std::string& key);
-		CCObject* objectForKey(intptr_t key);
+		CCObject* objectForKey(std::intptr_t key);
 		
 		const CCString* valueForKey(const std::string& key);
 
-		const CCString* valueForKey(intptr_t key);
+		const CCString* valueForKey(std::intptr_t key);
 
 		void setObject(CCObject* pObject, const std::string& key);
-		void setObject(CCObject* pObject, intptr_t key);
+		void setObject(CCObject* pObject, std::intptr_t key);
 
 		void removeObjectForKey(const std::string& key);
-		void removeObjectForKey(intptr_t key);
+		void removeObjectForKey(std::intptr_t key);
 		void removeObjectsForKeys(CCArray* pKeyArray);
 		void removeObjectForElememt(CCDictElement* pElement);
 		void removeAllObjects();
@@ -1697,7 +1644,7 @@ namespace cocos2d
 
 	private:
 		void setObjectUnSafe(CCObject* pObject, const std::string& key);
-		void setObjectUnSafe(CCObject* pObject, const intptr_t key);
+		void setObjectUnSafe(CCObject* pObject, const std::intptr_t key);
 
 	public:
 		CCDictElement* m_pElements;
@@ -5697,7 +5644,7 @@ namespace cocos2d
 		void strikeFinished();
 
 		void strikeRandom();
-		void strikeWithSeed(uint64_t seed);
+		void strikeWithSeed(std::uint64_t seed);
 
 		void draw();
 
@@ -5723,16 +5670,16 @@ namespace cocos2d
 		bool m_split;
 		int m_displacement;
 		int m_minDisplacement;
-		uint64_t m_seed;
+		std::uint64_t m_seed;
 		float m_lineWidth;
 		bool m_unkBool;
 		bool m_removeAfterFinished;
 		float m_duration;
 		float m_opacityModify;
 		std::array<CCPoint, 200>* m_lightningPoints;
-		uint32_t m_numPoints;
-		uint8_t m_displayedOpacity;
-		uint8_t m_opacity;
+		std::uint32_t m_numPoints;
+		std::uint8_t m_displayedOpacity;
+		std::uint8_t m_opacity;
 		ccColor3B m_displayedColor;
 		ccColor3B m_color;
 		bool m_cascadeColorEnabled;

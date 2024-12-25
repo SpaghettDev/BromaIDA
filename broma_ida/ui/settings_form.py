@@ -18,12 +18,6 @@ class SettingsForm(DynamicForm):
     rImportTypes: Form.ChkGroupItemControl
     rSetDefaultParserArguments: Form.ChkGroupItemControl
     rIgnoreMismatchedStructs: Form.ChkGroupItemControl
-    rUseCustomAndroidGNUSTL: Form.ChkGroupItemControl
-    rUseCustomMacGNUSTL: Form.ChkGroupItemControl
-
-    iMSVCSTLDir: Form.DirInput
-    iAndroidGNUSTLDir: Form.DirInput
-    iMacGNUSTLDir: Form.DirInput
 
     def __init__(self, version: str):
         super().__init__("""STARTITEM 0
@@ -38,14 +32,9 @@ BromaIDA
 <#Should return types be exported.\nIf enabled, only types that aren't TodoReturn are exported\nBecause of this, it is recommended to only enable this if you have already imported types.#Export return types:{rExportReturnTypes}>
 <#Should function arguments' names be exported.\nIf enabled, only argument names that don't match "a[0-9]+" and "p[0-9]+" are exported.#Export function arguments' names:{rExportFunctionArgumentsNames}>{cGeneralSettingsGroup}>
 
-<##                                                                 Import Types Settings#Enables importing of GD and cocos2d classes when importing a Broma file#Import Types:{rImportTypes}>
+<##                                             Import Types Settings#Enables importing of GD and cocos2d classes when importing a Broma file#Import Types:{rImportTypes}>
 <#Sets idaclang's parser arguments to suit the current binary's platform#Set Default Parser Parameters:{rSetDefaultParserArguments}>
-<#Disable checking if STL & Cocos structs already exist. (Not Recommended)#Ignore mismatched structs:{rIgnoreMismatchedStructs}>
-<#Enable this ONLY if you have genuine Android GNU STL headers#Use Custom Android GNU STL:{rUseCustomAndroidGNUSTL}>
-<#Enable this ONLY if you have genuine Mac GNU STL headers#Use Custom Mac GNU STL:{rUseCustomMacGNUSTL}>{cImportTypesSettingsGroup}>
-<#Select MSVC STL Directory. Used for Windows binary.\nIf you dont have custom GNU STL set and the binary's platform is not Windows,\nBromaIDA will use this instead with platform specfic modifications#MSVC STL Directory       :{iMSVCSTLDir}>
-<#Select Android GNU STL Directory#Android GNU STL Directory:{iAndroidGNUSTLDir}>
-<#Select Mac GNU STL Directory#Mac GNU STL Directory    :{iMacGNUSTLDir}>
+<#Disable checking if STL & Cocos structs already exist. (Not Recommended)#Ignore mismatched structs:{rIgnoreMismatchedStructs}>{cImportTypesSettingsGroup}>
 
            {cFooterLabel}
 """, {  # noqa: 501
@@ -58,11 +47,7 @@ BromaIDA
             "cImportTypesSettingsGroup": Form.ChkGroupControl((
                 "rImportTypes", "rSetDefaultParserArguments",
                 "rIgnoreMismatchedStructs",
-                "rUseCustomAndroidGNUSTL", "rUseCustomMacGNUSTL",
             )),
-            "iMSVCSTLDir": Form.DirInput(swidth=25),
-            "iAndroidGNUSTLDir": Form.DirInput(swidth=25),
-            "iMacGNUSTLDir": Form.DirInput(swidth=25),
             "cFooterLabel": Form.StringLabel(
                 f"BromaIDA v{version}. Made with love by SpaghettDev"
             )
@@ -92,16 +77,6 @@ BromaIDA
         self.rIgnoreMismatchedStructs.checked = DataManager().get(
             "ignore_mismatched_structs"
         )
-        self.rUseCustomAndroidGNUSTL.checked = DataManager().get(
-            "use_custom_android_gnustl"
-        )
-        self.rUseCustomMacGNUSTL.checked = DataManager().get(
-            "use_custom_mac_gnustl"
-        )
-
-        self.iMSVCSTLDir.value = DataManager().get("msvcstl_dir")
-        self.iAndroidGNUSTLDir.value = DataManager().get("android_gnustl_dir")
-        self.iMacGNUSTLDir.value = DataManager().get("mac_gnustl_dir")
 
     def onFormChange(self, fid: int) -> int:
         super().onFormChange(fid)
@@ -147,8 +122,7 @@ BromaIDA
         # Import Types Settings
         if fid in [
             self.rImportTypes.id, self.rSetDefaultParserArguments.id,
-            self.rIgnoreMismatchedStructs.id,
-            self.rUseCustomAndroidGNUSTL.id, self.rUseCustomMacGNUSTL.id
+            self.rIgnoreMismatchedStructs.id
         ]:
             if fid == self.rImportTypes.id:
                 DataManager().set(
@@ -165,54 +139,17 @@ BromaIDA
                     "ignore_mismatched_structs",
                     bool(self.GetControlValue(self.rIgnoreMismatchedStructs))
                 )
-            elif fid == self.rUseCustomAndroidGNUSTL.id:
-                DataManager().set(
-                    "use_custom_android_gnustl",
-                    bool(self.GetControlValue(self.rUseCustomAndroidGNUSTL))
-                )
-            elif fid == self.rUseCustomMacGNUSTL.id:
-                DataManager().set(
-                    "use_custom_mac_gnustl",
-                    bool(self.GetControlValue(self.rUseCustomMacGNUSTL))
-                )
 
         # -1 is Form initilalization
         if fid in [
             -1,
-            self.rUseCustomAndroidGNUSTL.id, self.rUseCustomMacGNUSTL.id,
             self.rImportTypes.id
         ]:
             # can't call EnableField in setup() because
             # p_fa is not set by then :(
-            self.EnableField(
-                self.iAndroidGNUSTLDir,
-                bool(self.GetControlValue(self.rUseCustomAndroidGNUSTL))
-            )
-            self.EnableField(
-                self.iMacGNUSTLDir,
-                bool(self.GetControlValue(self.rUseCustomMacGNUSTL))
-            )
-
             if not HAS_IDACLANG:
                 self.EnableField(self.rImportTypes, False)
                 DataManager().set("import_types", False)
-
-        # Import Types Directory Inputs
-        if fid == self.iMSVCSTLDir.id:
-            DataManager().set(
-                "msvcstl_dir",
-                self.GetControlValue(self.iMSVCSTLDir)
-            )
-        elif fid == self.iAndroidGNUSTLDir.id:
-            DataManager().set(
-                "android_gnustl_dir",
-                self.GetControlValue(self.iAndroidGNUSTLDir)
-            )
-        elif fid == self.iMacGNUSTLDir.id:
-            DataManager().set(
-                "mac_gnustl_dir",
-                self.GetControlValue(self.iMacGNUSTLDir)
-            )
 
         # -5 is form destruction
         if fid == -5:

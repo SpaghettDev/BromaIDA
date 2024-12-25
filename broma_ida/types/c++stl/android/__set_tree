@@ -1,0 +1,114 @@
+#pragma once
+
+#include "cstddef"
+#include "allocator"
+#include "__allocator_traits"
+#include "__aligned_buffer"
+#include "__iterator_tags"
+
+namespace std
+{
+	enum _Rb_tree_color { _S_red = false, _S_black = true };
+
+	struct _Rb_tree_node_base
+	{
+		typedef _Rb_tree_node_base* _Base_ptr;
+		typedef const _Rb_tree_node_base* _Const_Base_ptr;
+
+		_Rb_tree_color	_M_color;
+		_Base_ptr		_M_parent;
+		_Base_ptr		_M_left;
+		_Base_ptr		_M_right;
+	};
+
+	template<typename _Val>
+	struct _Rb_tree_node : public _Rb_tree_node_base
+	{
+		typedef _Rb_tree_node<_Val>* _Link_type;
+
+		__aligned_buffer<_Val> _M_storage;
+	};
+
+	template<typename _Tp>
+	struct _Rb_tree_iterator
+	{
+		typedef _Tp  value_type;
+		typedef _Tp& reference;
+		typedef _Tp* pointer;
+
+		typedef bidirectional_iterator_tag iterator_category;
+		typedef std::ptrdiff_t                  difference_type;
+
+		typedef _Rb_tree_iterator<_Tp>        _Self;
+		typedef _Rb_tree_node_base::_Base_ptr _Base_ptr;
+		typedef _Rb_tree_node<_Tp>*           _Link_type;
+
+		_Base_ptr _M_node;
+	};
+
+	template<typename _Tp>
+	struct _Rb_tree_const_iterator
+	{
+		typedef _Tp        value_type;
+		typedef const _Tp& reference;
+		typedef const _Tp* pointer;
+
+		typedef _Rb_tree_iterator<_Tp> iterator;
+
+		typedef bidirectional_iterator_tag iterator_category;
+		typedef ptrdiff_t                  difference_type;
+
+		typedef _Rb_tree_const_iterator<_Tp>        _Self;
+		typedef _Rb_tree_node_base::_Const_Base_ptr _Base_ptr;
+		typedef const _Rb_tree_node<_Tp>*           _Link_type;
+
+		_Base_ptr _M_node;
+	};
+
+	template<typename _Key, typename _Val, typename _KeyOfValue,
+			typename _Compare, typename _Alloc = allocator<_Val> >
+	class _Rb_tree
+	{
+		typedef std::allocator_traits<_Alloc>::template
+			rebind_alloc<_Rb_tree_node<_Val> > _Node_allocator;
+
+		typedef std::allocator_traits<_Node_allocator> _Alloc_traits;
+
+	protected:
+		typedef _Rb_tree_node_base* 		_Base_ptr;
+		typedef const _Rb_tree_node_base* 	_Const_Base_ptr;
+		typedef _Rb_tree_node<_Val>* 		_Link_type;
+		typedef const _Rb_tree_node<_Val>*	_Const_Link_type;
+
+	public:
+		typedef _Key 				key_type;
+		typedef _Val 				value_type;
+		typedef value_type* 		pointer;
+		typedef const value_type* 	const_pointer;
+		typedef value_type& 		reference;
+		typedef const value_type& 	const_reference;
+		typedef size_t 				size_type;
+		typedef ptrdiff_t 			difference_type;
+		typedef _Alloc 				allocator_type;
+
+	protected:
+		// Unused _Is_pod_comparator is kept as it is part of mangled name.
+		template<typename _Key_compare,
+			bool /* _Is_pod_comparator */ = __is_pod(_Key_compare)>
+		struct _Rb_tree_impl : public _Node_allocator
+		{
+			_Key_compare		_M_key_compare;
+			_Rb_tree_node_base 	_M_header;
+			size_type 		    _M_node_count; // Keeps track of size of tree.
+		};
+
+		_Rb_tree_impl<_Compare> _M_impl;
+
+	public:
+		typedef _Rb_tree_iterator<value_type>       iterator;
+		typedef _Rb_tree_const_iterator<value_type> const_iterator;
+
+		// typedef std::reverse_iterator<iterator>       reverse_iterator;
+		// typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+	};
+}

@@ -1,0 +1,104 @@
+#pragma once
+
+#include "cstddef"
+#include "type_traits"
+
+namespace std
+{
+	template <class _Tp> class allocator;
+
+	// These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
+	// Specializing allocator<void> is deprecated, but not using it.
+	template <>
+	class allocator<void>
+	{
+	public:
+		typedef void*             pointer;
+		typedef const void*       const_pointer;
+		typedef void              value_type;
+
+		template <class _Up> struct rebind { typedef allocator<_Up> other; };
+	};
+
+	template <>
+	class allocator<const void>
+	{
+	public:
+		typedef const void*       pointer;
+		typedef const void*       const_pointer;
+		typedef const void        value_type;
+
+		template <class _Up> struct rebind { typedef allocator<_Up> other; };
+	};
+
+	// This class provides a non-trivial default constructor to the class that derives from it
+	// if the condition is satisfied.
+	//
+	// The second template parameter exists to allow giving a unique type to __non_trivial_if,
+	// which makes it possible to avoid breaking the ABI when making this a base class of an
+	// existing class. Without that, imagine we have classes D1 and D2, both of which used to
+	// have no base classes, but which now derive from __non_trivial_if. The layout of a class
+	// that inherits from both D1 and D2 will change because the two __non_trivial_if base
+	// classes are not allowed to share the same address.
+	//
+	// By making those __non_trivial_if base classes unique, we work around this problem and
+	// it is safe to start deriving from __non_trivial_if in existing classes.
+	template <bool _Cond, class _Unique>
+	struct __non_trivial_if { };
+
+	template <class _Unique>
+	struct __non_trivial_if<true, _Unique> {
+		constexpr __non_trivial_if() noexcept { }
+	};
+
+	// allocator
+	//
+	// Note: For ABI compatibility between C++20 and previous standards, we make
+	//       allocator<void> trivial in C++20.
+
+	template <class _Tp>
+	class allocator
+		: private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp>>
+	{
+	public:
+		typedef size_t      size_type;
+		typedef ptrdiff_t   difference_type;
+		typedef _Tp         value_type;
+		typedef true_type   propagate_on_container_move_assignment;
+		typedef true_type   is_always_equal;
+
+		// C++20 Removed members
+		typedef _Tp*       pointer;
+		typedef const _Tp* const_pointer;
+		typedef _Tp&       reference;
+		typedef const _Tp& const_reference;
+
+		template <class _Up>
+		struct rebind {
+			typedef allocator<_Up> other;
+		};
+	};
+
+	template <class _Tp>
+	class allocator<const _Tp>
+		: private __non_trivial_if<!is_void<_Tp>::value, allocator<const _Tp>>
+	{
+	public:
+		typedef size_t      size_type;
+		typedef ptrdiff_t   difference_type;
+		typedef const _Tp   value_type;
+		typedef true_type   propagate_on_container_move_assignment;
+		typedef true_type   is_always_equal;
+
+		// C++20 Removed members
+		typedef const _Tp* pointer;
+		typedef const _Tp* const_pointer;
+		typedef const _Tp& reference;
+		typedef const _Tp& const_reference;
+
+		template <class _Up>
+		struct rebind {
+			typedef allocator<_Up> other;
+		};
+	};
+}

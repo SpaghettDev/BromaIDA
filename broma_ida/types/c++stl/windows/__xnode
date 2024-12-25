@@ -1,0 +1,44 @@
+#pragma once
+
+#include "utility"
+#include "type_traits"
+#include "__allocator_traits"
+
+namespace std
+{
+	template <class _Derived_type, class _KeyTy, class _ValueTy>
+	struct _Node_handle_map_base { // map-specific node handle behavior
+		using key_type    = _KeyTy;
+		using mapped_type = _ValueTy;
+
+	private:
+		using _Pair_type = pair<key_type, mapped_type>;
+	};
+
+	template <class _Derived_type, class _ValueTy>
+	struct _Node_handle_set_base { // set-specific node handle behavior
+		using value_type = _ValueTy;
+
+		value_type& value() const noexcept /* strengthened */ {
+			const auto& _Self = static_cast<const _Derived_type&>(*this);
+			return _Self._Getptr()->_Myval;
+		}
+	};
+
+	template <class _Node, class _Alloc, template <class...> class _Base, class... _Types>
+	class _Node_handle : public _Base<_Node_handle<_Node, _Alloc, _Base, _Types...>, _Types...> {
+		// storage for a node from one of the node-based standard containers
+	public:
+		using allocator_type = _Alloc;
+
+	private:
+		using _Alty_traits   = allocator_traits<_Alloc>;
+		using _Alnode        = allocator_traits<_Alloc>::template rebind_alloc<_Node>;
+		using _Alnode_traits = allocator_traits<_Alnode>;
+		using _Nodeptr       = typename _Alnode_traits::pointer;
+
+		_Nodeptr _Ptr{};
+		_Aligned_storage_t<sizeof(_Alloc), alignof(_Alloc)>
+			_Alloc_storage; // Invariant: contains a live _Alloc iff _Ptr != nullptr
+	};
+}

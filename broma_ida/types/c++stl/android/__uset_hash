@@ -1,0 +1,23 @@
+#pragma once
+
+#include "allocator"
+#include "__hash"
+#include "__binary_functions"
+#include "__allocator_traits"
+
+namespace std
+{
+	template<bool _Cache>
+	using __uset_traits = _Hashtable_traits<_Cache, true, true>;
+
+	template<typename _Value,
+		typename _Hash = hash<_Value>,
+		typename _Pred = std::equal_to<_Value>,
+		typename _Alloc = std::allocator<_Value>,
+		typename _Tr = __uset_traits<__cache_default<_Value, _Hash>::value>>
+	using __uset_hashtable = _Hashtable<_Value, _Value, _Alloc,
+					__detail::_Identity, _Pred, _Hash,
+					__detail::_Mod_range_hashing,
+					__detail::_Default_ranged_hash,
+					__detail::_Prime_rehash_policy, _Tr>;
+}

@@ -1,0 +1,51 @@
+#pragma once
+
+#include "allocator"
+#include "type_traits"
+#include "__hash"
+#include "__binary_functions"
+#include "__unary_functions"
+#include "__allocator_traits"
+#include "__set_tree"
+
+namespace std
+{
+	template<typename _Key, typename _Compare = std::less<_Key>,
+		typename _Alloc = std::allocator<_Key> >
+	class set
+	{
+		typedef typename _Alloc::value_type                   _Alloc_value_type;
+		// __glibcxx_class_requires(_Key, _SGIAssignableConcept)
+		// __glibcxx_class_requires4(_Compare, bool, _Key, _Key,
+		// 			_BinaryFunctionConcept)
+		// __glibcxx_class_requires2(_Key, _Alloc_value_type, _SameTypeConcept)
+
+	public:
+		typedef _Key     key_type;
+		typedef _Key     value_type;
+		typedef _Compare key_compare;
+		typedef _Compare value_compare;
+		typedef _Alloc   allocator_type;
+
+	private:
+		typedef allocator_traits<_Alloc>::template rebind_alloc<_Key> _Key_alloc_type;
+
+		typedef _Rb_tree<key_type, value_type, _Identity<value_type>,
+					key_compare, _Key_alloc_type> _Rep_type;
+		_Rep_type _M_t;  // Red-black tree representing set.
+
+		typedef allocator_traits<_Key_alloc_type> _Alloc_traits;
+
+	public:
+		typedef typename _Alloc_traits::pointer		       pointer;
+		typedef typename _Alloc_traits::const_pointer	   const_pointer;
+		typedef typename _Alloc_traits::reference		   reference;
+		typedef typename _Alloc_traits::const_reference	   const_reference;
+		typedef typename _Rep_type::const_iterator         iterator;
+		typedef typename _Rep_type::const_iterator         const_iterator;
+		// typedef typename _Rep_type::const_reverse_iterator reverse_iterator;
+		// typedef typename _Rep_type::const_reverse_iterator const_reverse_iterator;
+		typedef typename _Rep_type::size_type              size_type;
+		typedef typename _Rep_type::difference_type        difference_type;
+	};
+}

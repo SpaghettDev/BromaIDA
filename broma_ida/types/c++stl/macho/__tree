@@ -1,0 +1,324 @@
+#pragma once
+
+#include "utility"
+#include "unique_ptr"
+#include "__allocator_traits"
+#include "__pointer_traits"
+#include "__compressed_pair"
+#include "__iterator_tags"
+
+namespace std
+{
+	template <class _Tp, class _Compare, class _Allocator> class __tree;
+	template <class _Tp, class _NodePtr, class _DiffType>
+	class __tree_iterator;
+	template <class _Tp, class _ConstNodePtr, class _DiffType>
+	class __tree_const_iterator;
+
+	template <class _Pointer> class __tree_end_node;
+	template <class _VoidPtr> class __tree_node_base;
+	template <class _Tp, class _VoidPtr> class __tree_node;
+
+
+	template <class _Key, class _Tp>
+	struct __value_type
+	{
+		typedef _Key                                     key_type;
+		typedef _Tp                                      mapped_type;
+		typedef pair<const key_type, mapped_type>        value_type;
+		typedef pair<key_type&, mapped_type&>            __nc_ref_pair_type;
+		typedef pair<key_type&&, mapped_type&&>          __nc_rref_pair_type;
+
+	private:
+		value_type __cc;
+	};
+
+	template <class _Tp>
+	struct __extract_key_value_types;
+
+	template <class _Key, class _Tp>
+	struct __extract_key_value_types<__value_type<_Key, _Tp> >
+	{
+		typedef _Key const __key_type;
+		typedef _Tp        __mapped_type;
+	};
+
+
+	// template <class _Tp>
+	// struct __is_tree_value_type_imp : false_type {};
+
+	// template <class _Key, class _Value>
+	// struct __is_tree_value_type_imp<__value_type<_Key, _Value>> : true_type {};
+
+	// template <class ..._Args>
+	// struct __is_tree_value_type : false_type {};
+
+	// template <class _One>
+	// struct __is_tree_value_type<_One> : __is_tree_value_type_imp<typename __uncvref<_One>::type> {};
+
+	template <class _Tp>
+	struct __tree_key_value_types {
+		typedef _Tp key_type;
+		typedef _Tp __node_value_type;
+		typedef _Tp __container_value_type;
+		static const bool __is_map = false;
+	};
+
+	template <class _Key, class _Tp>
+	struct __tree_key_value_types<__value_type<_Key, _Tp> > {
+		typedef _Key                                         key_type;
+		typedef _Tp                                          mapped_type;
+		typedef __value_type<_Key, _Tp>                      __node_value_type;
+		typedef pair<const _Key, _Tp>                        __container_value_type;
+		typedef __container_value_type                       __map_value_type;
+		static const bool __is_map = true;
+	};
+
+	template <class _VoidPtr>
+	struct __tree_node_base_types {
+		typedef _VoidPtr                                               __void_pointer;
+
+		typedef __tree_node_base<__void_pointer>                      __node_base_type;
+		typedef typename std::pointer_traits<_VoidPtr>::template rebind<__node_base_type>
+																	  __node_base_pointer;
+
+		typedef __tree_end_node<__node_base_pointer>                  __end_node_type;
+		typedef typename std::pointer_traits<_VoidPtr>::template rebind<__end_node_type>
+																	  __end_node_pointer;
+		typedef __end_node_pointer __parent_pointer;
+	};
+
+	template <class _Tp, class _AllocPtr, class _KVTypes = __tree_key_value_types<_Tp>,
+			bool = _KVTypes::__is_map>
+	struct __tree_map_pointer_types {};
+
+	template <class _Tp, class _AllocPtr, class _KVTypes>
+	struct __tree_map_pointer_types<_Tp, _AllocPtr, _KVTypes, true> {
+		typedef typename _KVTypes::__map_value_type   _Mv;
+		typedef typename std::pointer_traits<_AllocPtr>::template rebind<_Mv>
+															__map_value_type_pointer;
+		typedef typename std::pointer_traits<_AllocPtr>::template rebind<const _Mv>
+														__const_map_value_type_pointer;
+	};
+
+	template <class _NodePtr, class _NodeT = typename pointer_traits<_NodePtr>::element_type>
+	struct __tree_node_types;
+
+	template <class _NodePtr, class _Tp, class _VoidPtr>
+	struct __tree_node_types<_NodePtr, __tree_node<_Tp, _VoidPtr> >
+		: public __tree_node_base_types<_VoidPtr>,
+				__tree_key_value_types<_Tp>,
+				__tree_map_pointer_types<_Tp, _VoidPtr>
+	{
+		typedef __tree_node_base_types<_VoidPtr> __base;
+		typedef __tree_key_value_types<_Tp>      __key_base;
+		typedef __tree_map_pointer_types<_Tp, _VoidPtr> __map_pointer_base;
+	public:
+		typedef typename pointer_traits<_NodePtr>::element_type       __node_type;
+		typedef _NodePtr                                              __node_pointer;
+
+		typedef _Tp                                                 __node_value_type;
+		typedef typename std::pointer_traits<_VoidPtr>::template rebind<__node_value_type>
+															__node_value_type_pointer;
+		typedef typename std::pointer_traits<_VoidPtr>::template rebind<const __node_value_type>
+														__const_node_value_type_pointer;
+		typedef typename __base::__end_node_pointer __iter_pointer;
+	};
+
+	template <class _ValueTp, class _VoidPtr>
+	struct __make_tree_node_types {
+		typedef typename std::pointer_traits<_VoidPtr>::template rebind<__tree_node<_ValueTp, _VoidPtr>>
+																				_NodePtr;
+		typedef __tree_node_types<_NodePtr> type;
+	};
+
+	// node
+
+	template <class _Pointer>
+	class __tree_end_node
+	{
+	public:
+		typedef _Pointer pointer;
+		pointer __left_;
+	};
+
+	template <class _VoidPtr>
+	class __tree_node_base
+		: public __tree_node_base_types<_VoidPtr>::__end_node_type
+	{
+		typedef __tree_node_base_types<_VoidPtr> _NodeBaseTypes;
+
+	public:
+		typedef typename _NodeBaseTypes::__node_base_pointer pointer;
+		typedef typename _NodeBaseTypes::__parent_pointer __parent_pointer;
+
+		pointer          __right_;
+		__parent_pointer __parent_;
+		bool __is_black_;
+	};
+
+	template <class _Tp, class _VoidPtr>
+	class __tree_node
+		: public __tree_node_base<_VoidPtr>
+	{
+	public:
+		typedef _Tp __node_value_type;
+
+		__node_value_type __value_;
+	};
+
+
+	template <class _Allocator>
+	class __tree_node_destructor
+	{
+		typedef _Allocator                                      allocator_type;
+		typedef allocator_traits<allocator_type>                __alloc_traits;
+
+	public:
+		typedef typename __alloc_traits::pointer                pointer;
+	private:
+		typedef __tree_node_types<pointer> _NodeTypes;
+		allocator_type& __na_;
+
+
+	public:
+		bool __value_constructed;
+
+		template <class> friend class __map_node_destructor;
+	};
+
+	template <class _NodeType, class _Alloc>
+	struct __generic_container_node_destructor;
+	template <class _Tp, class _VoidPtr, class _Alloc>
+	struct __generic_container_node_destructor<__tree_node<_Tp, _VoidPtr>, _Alloc>
+		: __tree_node_destructor<_Alloc>
+	{
+		using __tree_node_destructor<_Alloc>::__tree_node_destructor;
+	};
+
+	template <class _Tp, class _NodePtr, class _DiffType>
+	class __tree_iterator
+	{
+		typedef __tree_node_types<_NodePtr>                     _NodeTypes;
+		typedef _NodePtr                                        __node_pointer;
+		typedef typename _NodeTypes::__node_base_pointer        __node_base_pointer;
+		typedef typename _NodeTypes::__end_node_pointer         __end_node_pointer;
+		typedef typename _NodeTypes::__iter_pointer             __iter_pointer;
+		typedef pointer_traits<__node_pointer> __pointer_traits;
+
+		__iter_pointer __ptr_;
+
+	public:
+		typedef bidirectional_iterator_tag                     iterator_category;
+		typedef _Tp                                            value_type;
+		typedef _DiffType                                      difference_type;
+		typedef value_type&                                    reference;
+		typedef typename _NodeTypes::__node_value_type_pointer pointer;
+
+	private:
+		template <class, class, class> friend class __tree;
+		template <class, class, class> friend class __tree_const_iterator;
+		template <class> friend class __map_iterator;
+		template <class, class, class, class> friend class map;
+		template <class, class, class, class> friend class multimap;
+		template <class, class, class> friend class set;
+		template <class, class, class> friend class multiset;
+	};
+
+	template <class _Tp, class _NodePtr, class _DiffType>
+	class __tree_const_iterator
+	{
+		typedef __tree_node_types<_NodePtr>                     _NodeTypes;
+		typedef typename _NodeTypes::__node_pointer             __node_pointer;
+		typedef typename _NodeTypes::__node_base_pointer        __node_base_pointer;
+		typedef typename _NodeTypes::__end_node_pointer         __end_node_pointer;
+		typedef typename _NodeTypes::__iter_pointer             __iter_pointer;
+		typedef pointer_traits<__node_pointer> __pointer_traits;
+
+		__iter_pointer __ptr_;
+
+	public:
+		typedef bidirectional_iterator_tag                           iterator_category;
+		typedef _Tp                                                  value_type;
+		typedef _DiffType                                            difference_type;
+		typedef const value_type&                                    reference;
+		typedef typename _NodeTypes::__const_node_value_type_pointer pointer;
+
+	private:
+		typedef __tree_iterator<value_type, __node_pointer, difference_type>
+															__non_const_iterator;
+
+	private:
+		template <class, class, class> friend class __tree;
+		template <class, class, class, class> friend class map;
+		template <class, class, class, class> friend class multimap;
+		template <class, class, class> friend class set;
+		template <class, class, class> friend class multiset;
+		template <class> friend class __map_const_iterator;
+
+	};
+
+	template <class _Tp, class _Compare, class _Allocator>
+	class __tree
+	{
+	public:
+		typedef _Tp                                      value_type;
+		typedef _Compare                                 value_compare;
+		typedef _Allocator                               allocator_type;
+
+	private:
+		typedef allocator_traits<allocator_type>         __alloc_traits;
+		typedef typename __make_tree_node_types<value_type,
+			typename __alloc_traits::void_pointer>::type
+														_NodeTypes;
+		typedef typename _NodeTypes::key_type           key_type;
+	public:
+		typedef typename _NodeTypes::__node_value_type      __node_value_type;
+		typedef typename _NodeTypes::__container_value_type __container_value_type;
+
+		typedef typename __alloc_traits::pointer         pointer;
+		typedef typename __alloc_traits::const_pointer   const_pointer;
+		typedef typename __alloc_traits::size_type       size_type;
+		typedef typename __alloc_traits::difference_type difference_type;
+
+	public:
+		typedef typename _NodeTypes::__void_pointer        __void_pointer;
+
+		typedef typename _NodeTypes::__node_type           __node;
+		typedef typename _NodeTypes::__node_pointer        __node_pointer;
+
+		typedef typename _NodeTypes::__node_base_type      __node_base;
+		typedef typename _NodeTypes::__node_base_pointer   __node_base_pointer;
+
+		typedef typename _NodeTypes::__end_node_type       __end_node_t;
+		typedef typename _NodeTypes::__end_node_pointer    __end_node_ptr;
+
+		typedef typename _NodeTypes::__parent_pointer      __parent_pointer;
+		typedef typename _NodeTypes::__iter_pointer        __iter_pointer;
+
+		typedef typename __alloc_traits::template rebind_alloc<__node>
+														   __node_allocator;
+		typedef allocator_traits<__node_allocator>         __node_traits;
+
+	private:
+		typedef typename __node_traits::template rebind_alloc<__node_base>
+			__node_base_allocator;
+		typedef allocator_traits<__node_base_allocator> __node_base_traits;
+
+	private:
+		__iter_pointer                                     __begin_node_;
+		__compressed_pair<__end_node_t, __node_allocator>  __pair1_;
+		__compressed_pair<size_type, value_compare>        __pair3_;
+
+	public:
+		typedef __tree_iterator<value_type, __node_pointer, difference_type>             iterator;
+		typedef __tree_const_iterator<value_type, __node_pointer, difference_type> const_iterator;
+
+		typedef __tree_node_destructor<__node_allocator> _Dp;
+		typedef unique_ptr<__node, _Dp> __node_holder;
+
+	private:
+		template <class, class, class, class> friend class map;
+		template <class, class, class, class> friend class multimap;
+	};
+}

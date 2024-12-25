@@ -1,0 +1,21 @@
+#pragma once
+
+#include "type_traits"
+
+namespace std
+{
+	template <class _Ty1, class _Ty2, bool = is_empty_v<_Ty1> && !is_final_v<_Ty1>>
+	class _Compressed_pair final : private _Ty1 { // store a pair of values, deriving from empty first
+	public:
+		_Ty2 _Myval2;
+
+		using _Mybase = _Ty1; // for visualization
+	};
+
+	template <class _Ty1, class _Ty2>
+	class _Compressed_pair<_Ty1, _Ty2, false> final { // store a pair of values, not deriving from first
+	public:
+		_Ty1 _Myval1;
+		_Ty2 _Myval2;
+	};
+}

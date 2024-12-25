@@ -1,0 +1,37 @@
+#pragma once
+
+#include "cstddef"
+#include "type_traits"
+
+namespace std
+{
+	// inline constexpr std::size_t _Asan_granularity      = 8;
+
+
+	template <class _Ty>
+	class allocator {
+	public:
+		using _From_primary = allocator;
+
+		using value_type = _Ty;
+
+		using pointer       = _Ty*;
+		using const_pointer = const _Ty*;
+
+		using reference       = _Ty&;
+		using const_reference = const _Ty&;
+
+		using size_type       = size_t;
+		using difference_type = std::ptrdiff_t;
+
+		using propagate_on_container_move_assignment           = true_type;
+		using is_always_equal                                  = true_type;
+
+		template <class _Other>
+		struct rebind {
+			using other = allocator<_Other>;
+		};
+
+		// static constexpr size_t _Minimum_asan_allocation_alignment = _Asan_granularity;
+	};
+}

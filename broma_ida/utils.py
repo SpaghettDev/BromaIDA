@@ -2,13 +2,13 @@ from functools import cache
 from typing import NoReturn
 
 from idaapi import (
-    get_imagebase, get_inf_structure, decompile,
+    get_imagebase, decompile,
     BADADDR, SN_NOWARN
 )
 from ida_kernwin import ASKBTN_BTN1
 from ida_name import get_name_ea
 from ida_diskio import idadir
-from ida_ida import f_PE, f_MACHO, f_ELF
+from ida_ida import inf_get_filetype, f_PE, f_MACHO, f_ELF
 from ida_segment import get_first_seg
 from ida_bytes import get_dword, get_bytes
 from ida_segment import get_segm_by_sel
@@ -132,8 +132,7 @@ class IDAUtils:
             BROMA_PLATFORMS
         """
         platform: str
-        inf_structure = get_inf_structure()
-        file_type = inf_structure.filetype
+        file_type = inf_get_filetype()
 
         if file_type == f_PE:
             platform = "win"

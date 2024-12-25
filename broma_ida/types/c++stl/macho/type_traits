@@ -1,0 +1,67 @@
+#pragma once
+
+#define _GNUSTL_TRAITS_IS_TYPE(name, type) \
+	template <typename T> struct name : public false_type {}; \
+	template <> struct name<type> : public true_type {}; \
+	template <typename T> inline constexpr bool name ## _v = name<T>::value
+
+#define _GNUSTL_TRAITS_HAS_PROPERTY(name, ev) \
+	template <typename T> struct name : public integral_constant<bool, ev(T)> {}; \
+	template <typename T> inline constexpr bool name ## _v = ev(T);
+
+
+namespace std
+{
+	template <class...>
+	using __void_t = void;
+
+
+	template <class _Tp> struct remove_reference        { using type = _Tp; };
+	template <class _Tp> struct remove_reference<_Tp&>  { using type = _Tp; };
+	template <class _Tp> struct remove_reference<_Tp&&> { using type = _Tp; };
+	template <class _Tp>
+	using remove_reference_t = typename remove_reference<_Tp>::type;
+
+	template <class _Tp> struct remove_const { using type = _Tp; };
+	template <class _Tp> struct remove_const<const _Tp> { using type = _Tp; };
+	template <class _Tp>
+	using remove_const_t = typename remove_const<_Tp>::type;
+
+
+	template <class _Tp>
+	struct __type_identity { typedef _Tp type; };
+	template <class _Tp>
+	using __type_identity_t = typename __type_identity<_Tp>::type;
+
+	template<class _Tp> struct type_identity { typedef _Tp type; };
+	template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
+
+
+	template <class _Ty, _Ty _Val>
+	struct integral_constant {
+		static constexpr _Ty value = _Val;
+
+		using value_type = _Ty;
+		using type       = integral_constant;
+
+		constexpr operator value_type() const noexcept {
+			return value;
+		}
+	};
+
+	template <bool _Val>
+	using bool_constant = integral_constant<bool, _Val>;
+
+	using true_type  = bool_constant<true>;
+	using false_type = bool_constant<false>;
+
+
+	_GNUSTL_TRAITS_IS_TYPE(is_void, void);
+
+	_GNUSTL_TRAITS_HAS_PROPERTY(is_empty, __is_empty);
+	_GNUSTL_TRAITS_HAS_PROPERTY(is_final, __is_final);
+	_GNUSTL_TRAITS_HAS_PROPERTY(is_enum, __is_enum);
+}
+
+#undef _GNUSTL_TRAITS_IS_TYPE
+#undef _GNUSTL_TRAITS_HAS_PROPERTY

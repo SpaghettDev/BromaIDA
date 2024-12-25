@@ -1,0 +1,30 @@
+#pragma once
+
+namespace std
+{
+	template <class _Arg1, class _Arg2, class _Result>
+	struct __binary_function_keep_layout_base {
+		using first_argument_type = _Arg1;
+		using second_argument_type = _Arg2;
+		using result_type = _Result;
+	};
+
+	template <class _Arg1, class _Arg2, class _Result>
+	using __binary_function = __binary_function_keep_layout_base<_Arg1, _Arg2, _Result>;
+
+
+	template <class _Tp = void>
+	struct less
+		: __binary_function<_Tp, _Tp, bool>
+	{
+		typedef bool __result_type;  // used by valarray
+	};
+
+
+	template <class _Tp = void>
+	struct equal_to
+		: __binary_function<_Tp, _Tp, bool>
+	{
+		typedef bool __result_type;  // used by valarray
+	};
+}

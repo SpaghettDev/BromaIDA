@@ -1,0 +1,68 @@
+#pragma once
+
+#include "allocator"
+#include "__compressed_pair"
+#include "__allocator_traits"
+
+namespace stl
+{
+	struct _bit_reference {
+		std::uintptr_t* m_bitptr;
+		std::uintptr_t m_mask;
+	};
+	
+	struct __bit_iterator {
+		std::uintptr_t* m_bitptr;
+		unsigned int m_offset;
+	};
+}
+
+namespace std
+{
+	template <typename _Tp, class _Allocator = allocator<_Tp>>
+	class vector
+	{
+	private:
+		typedef allocator<_Tp>                                  __default_allocator_type;
+	public:
+		typedef vector                                          __self;
+		typedef _Tp                                             value_type;
+		typedef _Allocator                                      allocator_type;
+		typedef allocator_traits<allocator_type>                __alloc_traits;
+		typedef value_type&                                     reference;
+		typedef const value_type&                               const_reference;
+		typedef typename __alloc_traits::size_type              size_type;
+		typedef typename __alloc_traits::difference_type        difference_type;
+		typedef typename __alloc_traits::pointer                pointer;
+		typedef typename __alloc_traits::const_pointer          const_pointer;
+
+	protected:
+		_Tp* m_start;
+		_Tp* m_finish;
+		_Tp* m_reserveEnd;
+	};
+
+	template <class _Allocator>
+	class vector<bool, _Allocator>
+	{
+	public:
+		typedef vector                                   __self;
+		typedef bool                                     value_type;
+		typedef _Allocator                               allocator_type;
+		typedef allocator_traits<allocator_type>         __alloc_traits;
+		typedef typename __alloc_traits::size_type       size_type;
+		typedef typename __alloc_traits::difference_type difference_type;
+		typedef size_type                                __storage_type;
+		typedef stl::__bit_iterator                      pointer;
+		typedef const stl::__bit_iterator                const_pointer;
+		typedef pointer                                  iterator;
+		typedef const_pointer                            const_iterator;
+		// typedef std::reverse_iterator<iterator>         reverse_iterator;
+		// typedef std::reverse_iterator<const_iterator>   const_reverse_iterator;
+
+	protected:
+		stl::__bit_iterator m_start;
+		stl::__bit_iterator m_end;
+		std::uintptr_t* m_capacity_end;
+	};
+}

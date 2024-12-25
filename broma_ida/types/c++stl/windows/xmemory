@@ -1,0 +1,132 @@
+#pragma once
+
+#include "cstddef"
+#include "utility"
+#include "__allocator_traits"
+
+namespace std
+{
+	template <class _Value_type>
+	struct _Simple_types { // wraps types from allocators with simple addressing for use in iterators
+							// and other SCARY machinery
+		using value_type      = _Value_type;
+		using size_type       = size_t;
+		using difference_type = ptrdiff_t;
+		using pointer         = value_type*;
+		using const_pointer   = const value_type*;
+	};
+
+	template <class _Value_type, class _Size_type, class _Difference_type, class _Pointer, class _Const_pointer>
+	struct _Vec_iter_types {
+		using value_type      = _Value_type;
+		using size_type       = _Size_type;
+		using difference_type = _Difference_type;
+		using pointer         = _Pointer;
+		using const_pointer   = _Const_pointer;
+	};
+
+	template <class _Value_type, class _Voidptr>
+	struct _List_node { // list node
+		using value_type = _Value_type;
+		using _Nodeptr   = std::allocator_traits<_Voidptr>::template rebind_alloc<_List_node>;
+		_Nodeptr _Next; // successor node, or first element if head
+		_Nodeptr _Prev; // predecessor node, or last element if head
+		_Value_type _Myval = // the stored value, unused if head
+			_Returns_exactly<_Value_type>(); // fake a viable constructor to workaround GH-2749
+	};
+
+	template <class _Ty>
+	struct _List_simple_types : _Simple_types<_Ty> {
+		using _Node    = _List_node<_Ty, void*>;
+		using _Nodeptr = _Node*;
+	};
+
+
+	struct _Fake_allocator {};
+
+	struct _Container_base0 {
+		void _Orphan_all() noexcept {}
+		void _Swap_proxy_and_iterators(_Container_base0&) noexcept {}
+		void _Alloc_proxy(const _Fake_allocator&) noexcept {}
+		void _Reload_proxy(const _Fake_allocator&, const _Fake_allocator&) noexcept {}
+	};
+	struct _Iterator_base0 {
+		void _Adopt(const void*) noexcept {}
+		const _Container_base0* _Getcont() const noexcept {
+			return nullptr;
+		}
+
+		static constexpr bool _Unwrap_when_unverified = true;
+	};
+	using _Container_base = _Container_base0;
+	using _Iterator_base  = _Iterator_base0;
+
+	template <class _Alloc> // tests if allocator has simple addressing
+	inline constexpr bool _Is_simple_alloc_v =
+		is_same_v<typename allocator_traits<_Alloc>::size_type, size_t>
+		&& is_same_v<typename allocator_traits<_Alloc>::difference_type, ptrdiff_t>
+		&& is_same_v<typename allocator_traits<_Alloc>::pointer, typename _Alloc::value_type*>
+		&& is_same_v<typename allocator_traits<_Alloc>::const_pointer, const typename _Alloc::value_type*>;
+
+	template <class _Val_types>
+	class _Vector_val : public _Container_base {
+	public:
+		using value_type      = typename _Val_types::value_type;
+		using size_type       = typename _Val_types::size_type;
+		using difference_type = typename _Val_types::difference_type;
+		using pointer         = typename _Val_types::pointer;
+		using const_pointer   = typename _Val_types::const_pointer;
+		using reference       = value_type&;
+		using const_reference = const value_type&;
+
+		pointer _Myfirst; // pointer to beginning of array
+		pointer _Mylast; // pointer to current end of sequence
+		pointer _Myend; // pointer to end of array
+	};
+
+
+	template <class _Alloc>
+	using _Alloc_ptr_t = typename allocator_traits<_Alloc>::pointer;
+
+	template <class _Alloc>
+	struct _Alloc_construct_ptr { // pointer used to help construct 1 _Alloc::value_type without EH
+		using pointer = _Alloc_ptr_t<_Alloc>;
+		_Alloc& _Al;
+		pointer _Ptr;
+	};
+
+
+	template <class _Key, class... _Args>
+	struct _In_place_key_extract_map {
+		// by default we can't extract the key in the emplace family and must construct a node we might not use
+		static constexpr bool _Extractable = false;
+	};
+
+	template <class _Key, class _Second>
+	struct _In_place_key_extract_map<_Key, _Key, _Second> {
+		// if we would call the pair(key, value) constructor family, we can use the first parameter as the key
+		static constexpr bool _Extractable = true;
+	};
+
+	template <class _Key, class _First, class _Second>
+	struct _In_place_key_extract_map<_Key, pair<_First, _Second>> {
+		// if we would call the pair(pair<other, other>) constructor family, we can use the pair.first member as the key
+		static constexpr bool _Extractable = is_same_v<_Key, _Remove_cvref_t<_First>>;
+	};
+
+
+	template <class _Key, class... _Args>
+	struct _In_place_key_extract_set {
+		// by default we can't extract the key in the emplace family and must construct a node we might not use
+		static constexpr bool _Extractable = false;
+	};
+
+	template <class _Key>
+	struct _In_place_key_extract_set<_Key, _Key> {
+		// we can extract the key in emplace if the emplaced type is identical to the key type
+		static constexpr bool _Extractable = true;
+		static const _Key& _Extract(const _Key& _Val) noexcept {
+			return _Val;
+		}
+	};
+}

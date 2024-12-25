@@ -1,0 +1,58 @@
+#pragma once
+
+#include "utility"
+#include "allocator"
+#include "__allocator_traits"
+#include "__compressed_pair"
+#include "__pointer_traits"
+#include "__binary_functions"
+#include "__map_tree"
+
+namespace std
+{
+	template <class _Key, class _Tp, class _Compare = less<_Key>,
+		  class _Allocator = allocator<pair<const _Key, _Tp>>>
+	class map
+	{
+	public:
+		typedef _Key                                     key_type;
+		typedef _Tp                                      mapped_type;
+		typedef pair<const key_type, mapped_type>        value_type;
+		typedef type_identity_t<_Compare>              key_compare;
+		typedef type_identity_t<_Allocator>            allocator_type;
+		typedef value_type&                              reference;
+		typedef const value_type&                        const_reference;
+
+	private:
+		// typedef __value_type<key_type, mapped_type>             __value_type;
+		// typedef __map_value_compare<key_type, __value_type, key_compare> __vc;
+		// typedef __rebind_alloc<allocator_traits<allocator_type>, __value_type> __allocator_type;
+		// typedef __tree<__value_type, __vc, __allocator_type>   __base;
+		// typedef typename __base::__node_traits                 __node_traits;
+		typedef allocator_traits<allocator_type>               __alloc_traits;
+
+		// __base __tree_;
+
+	public:
+		typedef typename __alloc_traits::pointer               pointer;
+		typedef typename __alloc_traits::const_pointer         const_pointer;
+		typedef typename __alloc_traits::size_type             size_type;
+		typedef typename __alloc_traits::difference_type       difference_type;
+		//     typedef __map_iterator<typename __base::iterator>             iterator;
+		//     typedef __map_const_iterator<typename __base::const_iterator> const_iterator;
+		//     typedef _VSTD::reverse_iterator<iterator>               reverse_iterator;
+		//     typedef _VSTD::reverse_iterator<const_iterator>         const_reverse_iterator;
+
+		//     typedef __map_node_handle<typename __base::__node, allocator_type> node_type;
+		//     typedef __insert_return_type<iterator, node_type> insert_return_type;
+
+	protected:
+		std::less<_Key> compare;
+		std::_rb_tree_base m_header;
+		std::size_t m_nodecount;
+
+	public:
+		typedef std::_rb_tree_node<std::pair<_Key, _Tp>>*    _tree_node;
+		typedef std::_rb_tree_iterator<std::pair<_Key, _Tp>> iterator;
+	};
+}

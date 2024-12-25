@@ -1,10 +1,12 @@
 # flake8-in-file-ignores: noqa: E402
-VERSION = "6.2.2"
+VERSION = "7.0.0"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"
 PLUGIN_HOTKEY = "Ctrl+Shift+B"
 
+
+from pathlib import Path
 
 from idaapi import (
     msg as ida_msg, register_action, unregister_action,
@@ -88,7 +90,7 @@ def on_export(form: MainForm, code: int = 0):
 def bida_main():
     """BromaIDA main entrypoint"""
     DataManager().init(
-        IDAUtils.get_ida_path("plugins") / "broma_ida" / "shelf"
+        Path.home() / "broma_ida" / "shelf"
     )
 
     form_code = MainForm(

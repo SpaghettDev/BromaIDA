@@ -1,0 +1,146 @@
+#pragma once
+
+#include "utility"
+#include "allocator"
+#include "__allocator_traits"
+#include "__compressed_pair"
+#include "__pointer_traits"
+#include "__binary_functions"
+#include "__iterator_tags"
+#include "__tree"
+
+namespace std
+{
+	template <class _Key, class _CP, class _Compare,
+			bool = is_empty<_Compare>::value && !is_final<_Compare>::value>
+	class __map_value_compare
+		: private _Compare
+	{ };
+
+	template <class _Key, class _CP, class _Compare>
+	class __map_value_compare<_Key, _CP, _Compare, false>
+	{ _Compare comp; };
+
+	template <class _Allocator>
+	class __map_node_destructor
+	{
+		typedef _Allocator                          allocator_type;
+		typedef allocator_traits<allocator_type>    __alloc_traits;
+
+	public:
+		typedef typename __alloc_traits::pointer    pointer;
+
+	private:
+		allocator_type& __na_;
+
+		__map_node_destructor& operator=(const __map_node_destructor&);
+
+	public:
+		bool __first_constructed;
+		bool __second_constructed;
+	};
+
+	template <class _Key, class _Tp, class _Compare, class _Allocator>
+	class map;
+	template <class _Key, class _Tp, class _Compare, class _Allocator>
+	class multimap;
+	template <class _TreeIterator>
+	class __map_const_iterator;
+
+	template <class _TreeIterator>
+	class __map_iterator
+	{
+		typedef typename _TreeIterator::_NodeTypes                   _NodeTypes;
+		typedef typename _TreeIterator::__pointer_traits             __pointer_traits;
+
+		_TreeIterator __i_;
+
+	public:
+		typedef bidirectional_iterator_tag                           iterator_category;
+		typedef typename _NodeTypes::__map_value_type                value_type;
+		typedef typename _TreeIterator::difference_type              difference_type;
+		typedef value_type&                                          reference;
+		typedef typename _NodeTypes::__map_value_type_pointer        pointer;
+
+		template <class, class, class, class> friend class map;
+		template <class, class, class, class> friend class multimap;
+		template <class> friend class __map_const_iterator;
+	};
+
+	template <class _TreeIterator>
+	class __map_const_iterator
+	{
+		typedef typename _TreeIterator::_NodeTypes                   _NodeTypes;
+		typedef typename _TreeIterator::__pointer_traits             __pointer_traits;
+
+		_TreeIterator __i_;
+
+	public:
+		typedef bidirectional_iterator_tag                           iterator_category;
+		typedef typename _NodeTypes::__map_value_type                value_type;
+		typedef typename _TreeIterator::difference_type              difference_type;
+		typedef const value_type&                                    reference;
+		typedef typename _NodeTypes::__const_map_value_type_pointer  pointer;
+
+		template <class, class, class, class> friend class map;
+		template <class, class, class, class> friend class multimap;
+		template <class, class, class> friend class __tree_const_iterator;
+	};
+
+
+	template <class _Key, class _Tp, class _Compare = less<_Key>,
+			class _Allocator = allocator<pair<const _Key, _Tp> > >
+	class map
+	{
+	public:
+		// types:
+		typedef _Key                                     key_type;
+		typedef _Tp                                      mapped_type;
+		typedef pair<const key_type, mapped_type>        value_type;
+		typedef typename type_identity<_Compare>::type   key_compare;
+		typedef typename type_identity<_Allocator>::type allocator_type;
+		typedef value_type&                              reference;
+		typedef const value_type&                        const_reference;
+
+	private:
+		typedef __value_type<key_type, mapped_type>             __value_type;
+		typedef __map_value_compare<key_type, __value_type, key_compare> __vc;
+		typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<
+			__value_type> __allocator_type;
+		typedef __tree<__value_type, __vc, __allocator_type>   __base;
+		typedef typename __base::__node_traits                 __node_traits;
+		typedef allocator_traits<allocator_type>               __alloc_traits;
+
+		__base __tree_;
+
+	public:
+		typedef typename __alloc_traits::pointer               pointer;
+		typedef typename __alloc_traits::const_pointer         const_pointer;
+		typedef typename __alloc_traits::size_type             size_type;
+		typedef typename __alloc_traits::difference_type       difference_type;
+		// typedef __map_iterator<typename __base::iterator>             iterator;
+		// typedef __map_const_iterator<typename __base::const_iterator> const_iterator;
+		// typedef std::reverse_iterator<iterator>               reverse_iterator;
+		// typedef std::reverse_iterator<const_iterator>         const_reverse_iterator;
+
+		// typedef __map_node_handle<typename __base::__node, allocator_type> node_type;
+		// typedef __insert_return_type<iterator, node_type> insert_return_type;
+
+		template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
+		friend class map;
+		template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
+		friend class multimap;
+
+	private:
+		// typedef typename __base::__node                    __node;
+		// typedef typename __base::__node_allocator          __node_allocator;
+		// typedef typename __base::__node_pointer            __node_pointer;
+		// typedef typename __base::__node_base_pointer       __node_base_pointer;
+		// typedef typename __base::__parent_pointer          __parent_pointer;
+
+		// typedef __map_node_destructor<__node_allocator> _Dp;
+		// typedef unique_ptr<__node, _Dp> __node_holder;
+
+		// __node_holder __construct_node_with_key(const key_type& __k);
+	};
+}

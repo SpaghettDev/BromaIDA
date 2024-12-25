@@ -1,0 +1,13 @@
+#pragma once
+
+namespace std
+{
+	template <class _Ty1, class _Ty2>
+	struct pair { // store a pair of values
+		using first_type  = _Ty1;
+		using second_type = _Ty2;
+
+		_Ty1 first; // the first stored value
+		_Ty2 second; // the second stored value
+	};
+}

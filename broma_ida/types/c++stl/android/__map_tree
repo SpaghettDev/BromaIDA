@@ -1,0 +1,32 @@
+#pragma once
+
+namespace std
+{
+	struct _rb_tree_base
+	{
+		bool m_isblack;
+		_rb_tree_base* m_parent;
+		_rb_tree_base* m_left;
+		_rb_tree_base* m_right;
+	};
+
+	template <typename T>
+	struct _rb_tree_node : public _rb_tree_base
+	{
+		T m_value;
+	};
+
+	template <typename T>
+	struct _rb_tree_iterator
+	{
+		typedef T value_type;
+		typedef T& reference;
+		typedef T* pointer;
+
+		typedef _rb_tree_iterator<T> _Self;
+		typedef _rb_tree_base* _Base_ptr;
+		typedef _rb_tree_node<T>* _Link_type;
+
+		_Base_ptr m_node;
+	};
+}

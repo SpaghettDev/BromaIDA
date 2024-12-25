@@ -1,0 +1,25 @@
+#pragma once
+
+#include "allocator"
+#include "__hash"
+#include "__binary_functions"
+#include "__allocator_traits"
+
+namespace std
+{
+	template<bool _Cache>
+	using __umap_traits = __detail::_Hashtable_traits<_Cache, false, true>;
+
+  	template<typename _Key,
+		typename _Tp,
+		typename _Hash = hash<_Key>,
+		typename _Pred = std::equal_to<_Key>,
+		typename _Alloc = std::allocator<std::pair<const _Key, _Tp> >,
+		typename _Tr = __umap_traits<__cache_default<_Key, _Hash>::value>>
+	using __umap_hashtable = _Hashtable<_Key, std::pair<const _Key, _Tp>,
+						_Alloc, __detail::_Select1st,
+						_Pred, _Hash,
+						__detail::_Mod_range_hashing,
+						__detail::_Default_ranged_hash,
+						__detail::_Prime_rehash_policy, _Tr>;
+}

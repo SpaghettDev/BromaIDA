@@ -2,7 +2,8 @@ from copy import deepcopy
 
 from idaapi import (
     get_imagebase, apply_tinfo,
-    GN_SHORT, GN_DEMANGLED, TINFO_DEFINITE, BTF_TYPEDEF
+    GN_SHORT, GN_DEMANGLED, TINFO_DEFINITE, BTF_TYPEDEF,
+    BADADDR
 )
 from idc import (
     get_name as get_ea_name, get_func_flags, get_func_cmt,
@@ -14,8 +15,13 @@ from ida_kernwin import (
     show_wait_box, hide_wait_box, warning as ida_warning,
     ASKBTN_BTN1
 )
+try:
+    from ida_typeinf import get_ordinal_qty
+except ImportError:
+    from ida_typeinf import get_ordinal_count  # type: ignore
+    get_ordinal_qty = get_ordinal_count
 from ida_typeinf import (
-    get_idati, get_ordinal_qty, set_c_header_path,
+    get_idati, set_c_header_path,
     func_type_data_t as ida_func_type_data_t,
     tinfo_t as ida_tinfo_t
 )
@@ -47,6 +53,35 @@ if HAS_IDACLANG:
 
 class BIUtils:
     """BromaImporter utilities"""
+
+    _common_clang_argv = "-x c++ -nostdlib -nostdinc -nostdinc++"
+
+    _plat_to_parser_argv: dict[BROMA_PLATFORMS, str] = {
+        "win": "-target x86_64-pc-win32",
+        "imac": "-target x86_64-apple-darwin",
+        "m1":  "-target arm64-apple-darwin",
+        "ios": "-target arm64-apple-darwin",
+        "android32":  "-target armv7-none-linux-androideabi -mfloat-abi=hard",
+        "android64": "-target aarch64-none-linux-android -mfloat-abi=hard"
+    }
+
+    _plat_to_hss_size: dict[BROMA_PLATFORMS, int] = {
+        "win": 0x8D0,
+        "imac": 0x738,
+        "m1": 0x738,
+        "ios": 0x738,
+        "android32": 0x4EC,
+        "android64": 0x9D8
+    }
+
+    _plat_to_stl_name: dict[BROMA_PLATFORMS, str] = {
+        "win": "windows",
+        "android32": "android",
+        "android64": "android",
+        "imac": "macho",
+        "m1": "macho",
+        "ios": "macho"
+    }
 
     @staticmethod
     def get_type_info(
@@ -92,7 +127,7 @@ class BIUtils:
         if t is None:
             return False
 
-        if t.get_size() == 0xFFFFFFFFFFFFFFFF or t.is_forward_decl():
+        if t.get_size() == BADADDR or t.is_forward_decl():
             return True
 
         return False
@@ -115,9 +150,9 @@ class BIUtils:
                 ida_warning(
                     "Mismatch in STL types! "
                     "Classes will not be imported!\n"
-                    "To fix this, go to the local types window "
-                    "and delete all Cocos and GD types\n"
-                    "(as well as holy_shit struct)"
+                    "To fix this, go to the local types window, "
+                    "delete all Cocos and GD types\n"
+                    "(as well as holy_shit struct) then save the IDB."
                 )
                 return False
 
@@ -131,9 +166,9 @@ class BIUtils:
             ida_warning(
                 "Mismatch in cocos2d types! "
                 "Classes will not be imported!\n"
-                "To fix this, go to the local types window "
+                "To fix this, go to the local types window, "
                 "and delete all Cocos and GD types\n"
-                "(as well as holy_shit struct)"
+                "(as well as holy_shit struct) then save the IDB."
             )
             return False
 
@@ -149,16 +184,7 @@ class BIUtils:
         Returns:
             int: size in bytes
         """
-        plat_to_hss_size: dict[BROMA_PLATFORMS, int] = {
-            "win": 0x808,
-            "imac": 0x6A0,
-            "m1": 0x6A0,
-            "ios": 0x6A0,
-            "android32": 0x490,
-            "android64": 0x920
-        }
-
-        return plat_to_hss_size[platform]
+        return BIUtils._plat_to_hss_size[platform]
 
     @staticmethod
     def get_parser_argv(platform: BROMA_PLATFORMS) -> str:
@@ -170,18 +196,25 @@ class BIUtils:
         Returns:
             str
         """
-        plat_to_parser_argv: dict[BROMA_PLATFORMS, str] = {
-            "win": "-x c++ -target x86_64-pc-win32",
-            "imac": "-x c++ -target x86_64-apple-darwin",
-            "m1": "-x c++ -target arm64-apple-darwin",
-            "ios": "-x c++ -target arm64-apple-darwin",
-            "android32":
-                "-x c++ -target armv7-none-linux-androideabi -mfloat-abi=hard",
-            "android64":
-                "-x c++ -target aarch64-none-linux-android -mfloat-abi=hard"
-        }
+        return f"""{
+            BIUtils._common_clang_argv
+        } {BIUtils._plat_to_parser_argv[platform]}"""
 
-        return plat_to_parser_argv[platform]
+    @staticmethod
+    def get_stl_headers_path(platform: BROMA_PLATFORMS) -> str:
+        """Gets the STL headers path for a given platform
+
+        Args:
+            platform (BROMA_PLATFORMS)
+
+        Returns:
+            str
+        """
+        return IDAUtils.get_ida_path(
+            f"""plugins/broma_ida/types/c++stl/{
+                BIUtils._plat_to_stl_name[platform]
+            }"""
+        ).as_posix()
 
     @staticmethod
     def prompt_invalid_dir(input_str: str, dm_key: str):
@@ -288,7 +321,8 @@ class BIUtils:
         if function_data is None:
             ida_warning(
                 "Couldn't fix STL parameters for "
-                f"""function {binding.qualified_name}!"""
+                f"function {binding.qualified_name}!\n"
+                "(function is null)"
             )
             return
 
@@ -327,7 +361,8 @@ class BIUtils:
             except IndexError:
                 ida_warning(
                     "Couldn't fix STL parameters for "
-                    f"""function {binding.qualified_name}!""",
+                    f"function {binding.qualified_name}!\n"
+                    "(parameter index out of range)"
                 )
                 return
 
@@ -379,17 +414,8 @@ class BromaImporter:
         if not HAS_IDACLANG:
             return False
 
-        use_custom_gnustl = False
-        if self._target_platform != "win":
-            use_custom_gnustl = DataManager().get(
-                "use_custom_android_gnustl"
-                if self._target_platform.startswith("android")
-                else "use_custom_mac_gnustl"
-            )
-
         BromaCodegen(
             self._target_platform,
-            use_custom_gnustl,
             classes,
             IDAUtils.get_ida_path("plugins") / "broma_ida" / "types",
             Path("/".join(Path(self._file_path).parts[:-1]))
@@ -458,49 +484,14 @@ class BromaImporter:
                 )
 
         if import_types:
-            use_custom_gnustl = DataManager().get(
-                "use_custom_android_gnustl"
-                if self._target_platform.startswith("android") else
-                "use_custom_mac_gnustl"
+            set_c_header_path(
+                BIUtils.get_stl_headers_path(self._target_platform)
             )
-            custom_gnustl_dir_key = "android_gnustl_dir" \
-                if self._target_platform.startswith("android") \
-                else "mac_gnustl_dir"
-
-            msvcstl_dir = DataManager().get("msvcstl_dir")
-
-            if (self._target_platform == "win" or not use_custom_gnustl) and \
-                    not path_exists(msvcstl_dir):
-                BIUtils.prompt_invalid_dir(
-                    "MSVC STL directory", "msvcstl_dir"
-                )
-
-            if self._target_platform != "win":
-                gnustl_dir = DataManager().get(custom_gnustl_dir_key)
-
-                if use_custom_gnustl and not path_exists(gnustl_dir):
-                    BIUtils.prompt_invalid_dir(
-                        f"""{
-                            'Android' if self._target_platform.startswith(
-                                'android'
-                            ) else 'Mac'
-                        } GNU STL directory""",
-                        custom_gnustl_dir_key
-                    )
-
-            if self._target_platform == "win" or not use_custom_gnustl:
-                set_c_header_path(DataManager().get("msvcstl_dir"))
-            elif use_custom_gnustl:
-                set_c_header_path(DataManager().get(custom_gnustl_dir_key))
 
         if HAS_IDACLANG and import_types:
             if BIUtils.verify_types(self._target_platform) and \
                     self._codegen_classes(root.classesAsDict()):
-                set_default_parser_args = DataManager().get(
-                    "set_default_parser_args"
-                )
-
-                if set_default_parser_args:
+                if DataManager().get("set_default_parser_args"):
                     set_parser_argv(
                         "clang",
                         BIUtils.get_parser_argv(self._target_platform)
@@ -519,9 +510,8 @@ class BromaImporter:
                 parse_decls_for_srclang(
                     SRCLANG_CPP,
                     None,
-                    (
-                        IDAUtils.get_ida_path("plugins") /
-                        "broma_ida" / "types" / "codegen" /
+                    IDAUtils.get_ida_path(
+                        "plugins/broma_ida/types/codegen/"
                         f"{self._target_platform}.hpp"
                     ).as_posix(),
                     True

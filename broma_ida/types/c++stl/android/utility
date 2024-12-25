@@ -1,0 +1,52 @@
+#pragma once
+
+#include "cstddef"
+#include "type_traits"
+
+namespace std
+{
+	template <class _T1, class _T2>
+	struct pair
+#if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
+		: private __non_trivially_copyable_base<_T1, _T2>
+#endif
+	{
+		typedef _T1 first_type;
+		typedef _T2 second_type;
+
+		_T1 first;
+		_T2 second;
+	};
+
+	template <std::size_t Index, typename Pair>
+	struct get_impl;
+
+	template <typename T1, typename T2>
+	struct get_impl<0, pair<T1, T2>> {
+		static constexpr T1& get(pair<T1, T2>& p) noexcept {
+			return p.first;
+		}
+	};
+	template <typename T1, typename T2>
+	struct get_impl<1, pair<T1, T2>> {
+		static constexpr T2& get(pair<T1, T2>& p) noexcept {
+			return p.second;
+		}
+	};
+
+	template <std::size_t Index, typename T1, typename T2>
+	constexpr auto get(pair<T1, T2>& p) noexcept -> decltype(get_impl<Index, pair<T1, T2>>::get(p)) {
+		return get_impl<Index, pair<T1, T2>>::get(p);
+	}
+
+
+	template<int _Int, class _Tp>
+	class tuple_element;
+
+	template<class _Tp1, class _Tp2>
+	struct tuple_element<0, std::pair<_Tp1, _Tp2> >
+	{ typedef _Tp1 type; };
+	template<class _Tp1, class _Tp2>
+	struct tuple_element<1, std::pair<_Tp1, _Tp2> >
+	{ typedef _Tp2 type; };
+}

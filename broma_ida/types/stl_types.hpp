@@ -1,5 +1,6 @@
 #include "stl_includes.hpp"
 #include "enums.hpp"
+#include "cocos2d_geometry.hpp"	
 
 namespace cocos2d
 {
@@ -11,6 +12,7 @@ class EnterEffectInstance;
 class EffectGameObject;
 class SFXTriggerState;
 class GameObject;
+class LabelGameObject;
 class DynamicObjectAction;
 class SongTriggerState;
 class ChanceObject;
@@ -29,7 +31,7 @@ struct SongChannelState;
 struct GJPointDouble;
 struct GameObjectPhysics;
 
-// exists because IDA cant dynamically make STL types
+// exists because IDA cant dynamically make STL types, so fixing function parameters is impossible
 class holy_shit
 {
 public:
@@ -59,6 +61,9 @@ public:
 	std::vector<SavedActiveObjectState> m_V_saos;
 	std::vector<SavedSpecialObjectState> m_V_spos;
 	std::vector<SavedObjectStateRef> m_V_sosr;
+	std::vector<std::vector<GameObject*>*> m_V_v_go_p_p;
+	std::vector<std::unordered_map<int, int>*> m_V_UM_int_int_p;
+	std::vector<std::vector<bool>*> m_V_v_bool_p;
 
 	std::map<std::string, bool> m_M_str_bool;
 	std::map<std::pair<GJGameEvent, int>, int> m_M_pair_gjge_int_int;
@@ -73,7 +78,7 @@ public:
 	std::map<int, std::vector<cocos2d::CCObject*>> m_M_int_V_ccobj_p;
 	std::map<int, int> m_M_int_int;
 	std::map<std::pair<GJGameEvent, int>, std::vector<EventTriggerInstance>> m_M_pair_gjge_int_V_eti;
-
+	
 	std::unordered_map<int, GameObject*> m_UM_int_go_p;
 	std::unordered_map<int, std::pair<int, int>> m_UM_int_pair_int_int;
 	std::unordered_map<int, int> m_UM_int_int;
@@ -92,6 +97,8 @@ public:
 	std::unordered_map<int, std::vector<GameObject*>> m_UM_int_V_go_p;
 	std::unordered_map<int, std::string> m_UM_int_str;
 	std::unordered_map<int, EnhancedGameObject*> m_UM_int_ego_p;
+	std::unordered_map<int, cocos2d::CCPoint> m_UM_int_ccp;
+	std::unordered_map<int, std::vector<LabelGameObject*>> m_UM_int_V_lgo_p;
 
 	std::set<int> m_S_int;
 

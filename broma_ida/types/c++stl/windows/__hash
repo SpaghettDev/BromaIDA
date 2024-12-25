@@ -1,0 +1,141 @@
+#pragma once
+
+#include "list"
+#include "type_traits"
+#include "__compressed_pair"
+
+namespace std
+{
+	template <class _Kty>
+	struct hash;
+
+	template <class _Kty, bool _Enabled>
+	struct _Conditionally_enabled_hash { // conditionally enabled hash base
+		using _ARGUMENT_TYPE_NAME = _Kty;
+		using _RESULT_TYPE_NAME   = size_t;
+
+		size_t operator()(const _Kty& _Keyval)
+			noexcept(noexcept(hash<_Kty>::_Do_hash(_Keyval))) /* strengthened */ {
+			return hash<_Kty>::_Do_hash(_Keyval);
+		}
+	};
+
+	template <class _Kty>
+	struct _Conditionally_enabled_hash<_Kty, false> { // conditionally disabled hash base
+		_Conditionally_enabled_hash()                                              = delete;
+		_Conditionally_enabled_hash(const _Conditionally_enabled_hash&)            = delete;
+		_Conditionally_enabled_hash(_Conditionally_enabled_hash&&)                 = delete;
+		_Conditionally_enabled_hash& operator=(const _Conditionally_enabled_hash&) = delete;
+		_Conditionally_enabled_hash& operator=(_Conditionally_enabled_hash&&)      = delete;
+	};
+
+	template <class _Kty>
+	struct hash : _Conditionally_enabled_hash<_Kty, !is_const_v<_Kty> && !is_volatile_v<_Kty>
+														&& (is_enum_v<_Kty> || is_integral_v<_Kty> || is_pointer_v<_Kty>)> {
+		// hash functor primary template (handles enums, integrals, and pointers)
+		static size_t _Do_hash(const _Kty& _Keyval) noexcept {
+			return _Hash_representation(_Keyval);
+		}
+	};
+
+	template <class _Kty, class _Hasher, class _Keyeq, class = void>
+	struct _Uhash_choose_transparency {
+		// transparency selector for non-transparent hashed containers
+		template <class>
+		using _Deduce_key = const _Kty&;
+	};
+
+	// template <class _Kty, class _Hasher, class _Keyeq>
+	// struct _Uhash_choose_transparency<_Kty, _Hasher, _Keyeq,
+	//     enable_if_t<conjunction_v<_Is_transparent<_Hasher>, _Is_transparent<_Keyeq>>>> {
+	//     // transparency selector for transparent hashed containers
+	//     template <class _Keyty>
+	//     using _Deduce_key = const _Keyty&;
+
+	//     template <class _Container, class _Kx>
+	//     static constexpr bool _Supports_transparency =
+	//         !disjunction_v<is_convertible<_Kx, typename _Container::const_iterator>,
+	//             is_convertible<_Kx, typename _Container::iterator>>;
+	// };
+
+	// template <class _Hasher, class _Kty>
+	// inline constexpr bool _Nothrow_hash =
+	// 	noexcept(static_cast<size_t>(declval<const _Hasher&>()(declval<const _Kty&>())));
+
+	template <class _Kty, class _Hasher, class _Keyeq>
+	class _Uhash_compare
+		: public _Uhash_choose_transparency<_Kty, _Hasher, _Keyeq> { // traits class for unordered containers
+	public:
+		enum { // parameters for hash table
+			bucket_size = 1 // 0 < bucket_size
+		};
+
+		_Compressed_pair<_Hasher, _Compressed_pair<_Keyeq, float>> _Mypair;
+	};
+
+	template <class _Aliter>
+	struct _Hash_vec {
+		// TRANSITION, ABI: "vector" for ABI compatibility that doesn't call allocator::construct
+		using _Aliter_traits    = allocator_traits<_Aliter>;
+		using value_type        = typename _Aliter::value_type;
+		using size_type         = typename _Aliter_traits::size_type;
+		using difference_type   = typename _Aliter_traits::difference_type;
+		using pointer           = typename _Aliter_traits::pointer;
+		using _Aliter_scary_val = _Vector_val<conditional_t<_Is_simple_alloc_v<_Aliter>, _Simple_types<value_type>,
+			_Vec_iter_types<value_type, size_type, difference_type, pointer, typename _Aliter_traits::const_pointer>>>;
+
+		_Compressed_pair<_Aliter, _Aliter_scary_val> _Mypair;
+	};
+
+
+	template <class _Traits>
+	class _Hash { // hash table -- list with vector of iterators for quick access
+	public:
+		using _Mylist             = list<typename _Traits::value_type, typename _Traits::allocator_type>;
+		using _Alnode             = typename _Mylist::_Alnode;
+		using _Alnode_traits      = typename _Mylist::_Alnode_traits;
+		using _Node               = typename _Mylist::_Node;
+		using _Nodeptr            = typename _Mylist::_Nodeptr;
+		using _Mutable_value_type = typename _Traits::_Mutable_value_type;
+
+		using _Key_compare   = typename _Traits::key_compare;
+		using _Value_compare = typename _Traits::value_compare;
+
+	public:
+		using key_type = typename _Traits::key_type;
+
+		using value_type      = typename _Mylist::value_type;
+		using allocator_type  = typename _Mylist::allocator_type;
+		using size_type       = typename _Mylist::size_type;
+		using difference_type = typename _Mylist::difference_type;
+		using pointer         = typename _Mylist::pointer;
+		using const_pointer   = typename _Mylist::const_pointer;
+		using reference       = value_type&;
+		using const_reference = const value_type&;
+
+		// using iterator =
+		// 	conditional_t<is_same_v<key_type, value_type>, typename _Mylist::const_iterator, typename _Mylist::iterator>;
+		// using const_iterator = typename _Mylist::const_iterator;
+
+		using _Unchecked_iterator       = conditional_t<is_same_v<key_type, value_type>,
+			typename _Mylist::_Unchecked_const_iterator, typename _Mylist::_Unchecked_iterator>;
+		using _Unchecked_const_iterator = typename _Mylist::_Unchecked_const_iterator;
+
+		using _Aliter = std::allocator_traits<_Alnode>::template rebind_alloc<_Unchecked_iterator>;
+
+		static constexpr size_type _Bucket_size = _Key_compare::bucket_size;
+		static constexpr size_type _Min_buckets = 8; // must be a positive power of 2
+		static constexpr bool _Multi            = _Traits::_Multi;
+
+		// using local_iterator       = iterator;
+		// using const_local_iterator = const_iterator;
+
+		_Traits _Traitsobj; // traits to customize behavior
+		_Mylist _List; // list of elements, must initialize before _Vec
+		_Hash_vec<_Aliter> _Vec; // "vector" of list iterators for buckets:
+								// each bucket is 2 iterators denoting the closed range of elements in the bucket,
+								// or both iterators set to _Unchecked_end() if the bucket is empty.
+		size_type _Mask; // the key mask
+		size_type _Maxidx; // current maximum key value, must be a power of 2
+	};
+}

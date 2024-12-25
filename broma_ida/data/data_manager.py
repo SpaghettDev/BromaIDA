@@ -1,5 +1,6 @@
 from typing import Self, Any
 from pathlib import Path
+from pickle import UnpicklingError
 import shelve
 
 
@@ -12,6 +13,7 @@ class DataManager:
 
     __instance: Self = None  # type: ignore[assignment]
     __shelf: shelve.Shelf[Any] = None  # type: ignore[assignment]
+    __shelf_path: Path = None  # type: ignore[assignment]
 
     def __new__(cls, *args, **kwargs) -> Self:
         if not cls._DataManager__instance:  # type: ignore[has-type]
@@ -23,21 +25,25 @@ class DataManager:
 
     def _init_values(self):
         """Initializes DataManager's default values"""
-        self.get("always_overwrite_merge_information", True)
-        self.get("disable_broma_hash_check", False)
-        self.get("always_overwrite_idb", False)
-        self.get("export_return_types", False)
-        self.get("export_args_names", False)
+        try:
+            self.get("always_overwrite_merge_information", True)
+            self.get("disable_broma_hash_check", False)
+            self.get("always_overwrite_idb", False)
+            self.get("export_return_types", False)
+            self.get("export_args_names", False)
 
-        self.get("import_types", True)
-        self.get("use_custom_android_gnustl", False)
-        self.get("use_custom_mac_gnustl", False)
-        self.get("set_default_parser_args", True)
-        self.get("ignore_mismatched_structs", False)
+            self.get("import_types", True)
+            self.get("set_default_parser_args", True)
+            self.get("ignore_mismatched_structs", False)
+        except UnpicklingError:
+            print(
+                "[!] BromaDataManager: Shelf is corrupted! "
+                "Resetting to default values."
+            )
+            self._delete_shelf()
+            self.__shelf = shelve.open(self.__shelf_path)
 
-        self.get("msvcstl_dir", "")
-        self.get("android_gnustl_dir", "")
-        self.get("mac_gnustl_dir", "")
+            self._init_values()
 
     def init(self, filepath: Path):
         """Initializes a DataManager instance.
@@ -45,15 +51,19 @@ class DataManager:
         Args:
             filepath (Path): Path to the shelf file
         """
+        filepath.parent.mkdir(exist_ok=True)
+
         if self.__shelf is None:
+            self.__shelf_path = filepath
+
             try:
                 self.__shelf = shelve.open(filepath)
             except SyntaxError:
                 print(
-                    "[!] DataManager: Shelf is corrupted! "
+                    "[!] BromaDataManager: Shelf is corrupted! "
                     "Resetting to default values."
                 )
-                filepath.unlink()
+                self._delete_shelf()
                 self.__shelf = shelve.open(filepath)
 
             self._init_values()
@@ -112,3 +122,8 @@ class DataManager:
         if self.__shelf is not None:
             self.__shelf.close()
             self.__shelf = None  # type: ignore[assignment]
+
+    def _delete_shelf(self):
+        """Deletes the shelf"""
+        for suffix in (".bak", ".dat", ".dir"):
+            self.__shelf_path.with_suffix(suffix).unlink(True)

@@ -1,0 +1,40 @@
+#pragma once
+
+#include "__pointer_traits"
+#include "__allocator_traits"
+#include "__compressed_pair"
+
+namespace std
+{
+	template <class _Tp>
+	struct default_delete {};
+
+	template <class _Tp>
+	struct default_delete<_Tp[]> {};
+
+
+	template <class _Tp, class _Dp = default_delete<_Tp> >
+	class unique_ptr {
+	public:
+		typedef _Tp element_type;
+		typedef _Dp deleter_type;
+		typedef typename __pointer<_Tp, deleter_type>::type pointer;
+
+	private:
+		__compressed_pair<pointer, deleter_type> __ptr_;
+
+		struct __nat { int __for_bool_; };
+	};
+
+
+	template <class _Tp, class _Dp>
+	class unique_ptr<_Tp[], _Dp> {
+	public:
+		typedef _Tp element_type;
+		typedef _Dp deleter_type;
+		typedef typename __pointer<_Tp, deleter_type>::type pointer;
+
+	private:
+		__compressed_pair<pointer, deleter_type> __ptr_;
+	};
+}

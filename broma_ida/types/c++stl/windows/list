@@ -1,0 +1,149 @@
+#pragma once
+
+#include "allocator"
+#include "xmemory"
+#include "__allocator_traits"
+#include "__pointer_traits"
+#include "__iterator_tags"
+#include "__compressed_pair"
+
+namespace std
+{
+	template <class _Mylist, class _Base = _Iterator_base0>
+	class _List_unchecked_const_iterator : public _Base {
+	public:
+		using iterator_category = bidirectional_iterator_tag;
+
+		using _Nodeptr        = typename _Mylist::_Nodeptr;
+		using value_type      = typename _Mylist::value_type;
+		using difference_type = typename _Mylist::difference_type;
+		using pointer         = typename _Mylist::const_pointer;
+		using reference       = const value_type&;
+
+		_Nodeptr _Ptr; // pointer to node
+	};
+
+	template <class _Mylist>
+	class _List_unchecked_iterator : public _List_unchecked_const_iterator<_Mylist> {
+	public:
+		using _Mybase           = _List_unchecked_const_iterator<_Mylist>;
+		using iterator_category = bidirectional_iterator_tag;
+
+		using _Nodeptr        = typename _Mylist::_Nodeptr;
+		using value_type      = typename _Mylist::value_type;
+		using difference_type = typename _Mylist::difference_type;
+		using pointer         = typename _Mylist::pointer;
+		using reference       = value_type&;
+
+		// using _Mybase::_Mybase;
+	};
+
+	template <class _Mylist>
+	class _List_const_iterator : public _List_unchecked_const_iterator<_Mylist, _Iterator_base> {
+	public:
+		using _Mybase           = _List_unchecked_const_iterator<_Mylist, _Iterator_base>;
+		using iterator_category = bidirectional_iterator_tag;
+
+		using _Nodeptr        = typename _Mylist::_Nodeptr;
+		using value_type      = typename _Mylist::value_type;
+		using difference_type = typename _Mylist::difference_type;
+		using pointer         = typename _Mylist::const_pointer;
+		using reference       = const value_type&;
+
+		// using _Mybase::_Mybase;
+
+		using _Prevent_inheriting_unwrap = _List_const_iterator;
+	};
+
+	template <class _Mylist>
+	class _List_iterator : public _List_const_iterator<_Mylist> {
+	public:
+		using _Mybase           = _List_const_iterator<_Mylist>;
+		using iterator_category = bidirectional_iterator_tag;
+
+		using _Nodeptr        = typename _Mylist::_Nodeptr;
+		using value_type      = typename _Mylist::value_type;
+		using difference_type = typename _Mylist::difference_type;
+		using pointer         = typename _Mylist::pointer;
+		using reference       = value_type&;
+
+		// using _Mybase::_Mybase;
+
+		using _Prevent_inheriting_unwrap = _List_iterator;
+	};
+
+	template <class _Value_type, class _Size_type, class _Difference_type, class _Pointer, class _Const_pointer,
+		class _Nodeptr_type>
+	struct _List_iter_types {
+		using value_type      = _Value_type;
+		using size_type       = _Size_type;
+		using difference_type = _Difference_type;
+		using pointer         = _Pointer;
+		using const_pointer   = _Const_pointer;
+		using _Nodeptr        = _Nodeptr_type;
+	};
+
+	template <class _Val_types>
+	class _List_val : public _Container_base {
+	public:
+		using _Nodeptr = typename _Val_types::_Nodeptr;
+
+		using value_type      = typename _Val_types::value_type;
+		using size_type       = typename _Val_types::size_type;
+		using difference_type = typename _Val_types::difference_type;
+		using pointer         = typename _Val_types::pointer;
+		using const_pointer   = typename _Val_types::const_pointer;
+		using reference       = value_type&;
+		using const_reference = const value_type&;
+
+		_Nodeptr _Myhead; // pointer to head node
+		size_type _Mysize; // number of elements
+	};
+
+
+	template <class _Traits>
+	class _Hash;
+
+	template <class _Ty, class _Alloc = allocator<_Ty>>
+	class list { // bidirectional linked list
+	private:
+		template <class>
+		friend class _Hash;
+		template <class _Traits>
+		friend bool _Hash_equal(const _Hash<_Traits>&, const _Hash<_Traits>&);
+
+		using _Alty          = allocator_traits<_Alloc>::template rebind_alloc<_Ty>;
+		using _Alty_traits   = allocator_traits<_Alty>;
+		using _Node          = _List_node<_Ty, typename allocator_traits<_Alloc>::void_pointer>;
+		using _Alnode        = allocator_traits<_Alloc>::template rebind_alloc<_Node>;
+		using _Alnode_traits = allocator_traits<_Alnode>;
+		using _Nodeptr       = typename _Alnode_traits::pointer;
+
+		using _Val_types = conditional_t<_Is_simple_alloc_v<_Alnode>, _List_simple_types<_Ty>,
+			_List_iter_types<_Ty, typename _Alty_traits::size_type, typename _Alty_traits::difference_type,
+				typename _Alty_traits::pointer, typename _Alty_traits::const_pointer, _Nodeptr>>;
+
+		using _Scary_val = _List_val<_Val_types>;
+
+	public:
+		using value_type      = _Ty;
+		using allocator_type  = _Alloc;
+		using size_type       = typename _Alty_traits::size_type;
+		using difference_type = typename _Alty_traits::difference_type;
+		using pointer         = typename _Alty_traits::pointer;
+		using const_pointer   = typename _Alty_traits::const_pointer;
+		using reference       = value_type&;
+		using const_reference = const value_type&;
+
+		using iterator                  = _List_iterator<_Scary_val>;
+		using const_iterator            = _List_const_iterator<_Scary_val>;
+		using _Unchecked_iterator       = _List_unchecked_iterator<_Scary_val>;
+		using _Unchecked_const_iterator = _List_unchecked_const_iterator<_Scary_val>;
+
+		// using reverse_iterator       = _STD reverse_iterator<iterator>;
+		// using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
+
+	private:
+		_Compressed_pair<_Alnode, _Scary_val> _Mypair;
+	};
+}

@@ -1,0 +1,26 @@
+#pragma once
+
+#include "cstddef"
+
+namespace std
+{
+	template <class _Ty, std::size_t _Size>
+	class array {
+	public:
+		using value_type      = _Ty;
+		using size_type       = size_t;
+		using difference_type = ptrdiff_t;
+		using pointer         = _Ty*;
+		using const_pointer   = const _Ty*;
+		using reference       = _Ty&;
+		using const_reference = const _Ty&;
+	
+		// using iterator       = _Array_iterator<_Ty, _Size>;
+		// using const_iterator = _Array_const_iterator<_Ty, _Size>;
+	
+		// using reverse_iterator       = _STD reverse_iterator<iterator>;
+		// using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
+	
+		_Ty _Elems[_Size];
+	};
+}

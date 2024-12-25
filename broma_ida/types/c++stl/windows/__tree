@@ -1,0 +1,240 @@
+#pragma once
+
+#include "cstddef"
+#include "type_traits"
+#include "xmemory"
+#include "__allocator_traits"
+#include "__pointer_traits"
+#include "__compressed_pair"
+#include "__iterator_tags"
+#include "__xnode"
+
+namespace std
+{
+	template <class _Iterator, class _NodeType>
+	struct _Insert_return_type {
+		_Iterator position;
+		bool inserted;
+		_NodeType node;
+	};
+
+
+	template <class _Value_type, class _Voidptr>
+	struct _Tree_node {
+		using _Nodeptr   = pointer_traits<_Voidptr>::template rebind<_Tree_node>;
+		using value_type = _Value_type;
+
+		_Nodeptr _Left; // left subtree, or smallest element if head
+		_Nodeptr _Parent; // parent, or root of tree if head
+		_Nodeptr _Right; // right subtree, or largest element if head
+		char _Color; // _Red or _Black, _Black if head
+		char _Isnil; // true only if head (also nil) node; TRANSITION, should be bool
+		value_type _Myval = // the stored value, unused if head
+			_Returns_exactly<value_type>(); // fake a viable constructor to workaround GH-2749
+
+		enum _Redbl { // colors for link to parent
+			_Red,
+			_Black
+		};
+	};
+
+
+	template <class _Ty>
+	struct _Tree_simple_types : _Simple_types<_Ty> {
+		using _Node    = _Tree_node<_Ty, void*>;
+		using _Nodeptr = _Node*;
+	};
+
+	enum class _Tree_child {
+		_Right, // perf note: compare with _Right rather than _Left where possible for comparison with zero
+		_Left,
+		_Unused // indicates that tree child should never be used for insertion
+	};
+
+	template <class _Nodeptr>
+	struct _Tree_id {
+		_Nodeptr _Parent; // the leaf node under which a new node should be inserted
+		_Tree_child _Child;
+	};
+
+	template <class _Nodeptr>
+	struct _Tree_find_result {
+		_Tree_id<_Nodeptr> _Location;
+		_Nodeptr _Bound;
+	};
+
+	template <class _Nodeptr>
+	struct _Tree_find_hint_result {
+		_Tree_id<_Nodeptr> _Location;
+		bool _Duplicate;
+	};
+
+	template <class _Val_types>
+	class _Tree_val : public _Container_base {
+	public:
+		using _Nodeptr = typename _Val_types::_Nodeptr;
+
+		using value_type      = typename _Val_types::value_type;
+		using size_type       = typename _Val_types::size_type;
+		using difference_type = typename _Val_types::difference_type;
+		using pointer         = typename _Val_types::pointer;
+		using const_pointer   = typename _Val_types::const_pointer;
+		using reference       = value_type&;
+		using const_reference = const value_type&;
+
+		// using _Unchecked_const_iterator = _Tree_unchecked_const_iterator<_Tree_val>;
+		// using const_iterator            = _Tree_const_iterator<_Tree_val>;
+
+		enum _Redbl { // colors for link to parent
+			_Red,
+			_Black
+		};
+
+		_Nodeptr _Myhead; // pointer to head node
+		size_type _Mysize; // number of elements
+	};
+
+	template <class _Alnode, class _Scary_val>
+	struct _Tree_head_scoped_ptr { // temporary storage for allocated node pointers to ensure exception safety
+		_Alnode& _Al;
+		_Scary_val* _Mycont;
+	};
+
+	template <class _Alnode>
+	struct _Tree_temp_node_alloc : _Alloc_construct_ptr<_Alnode> {
+		// EH helper for _Tree_temp_node
+		explicit _Tree_temp_node_alloc(_Alnode& _Al_) : _Alloc_construct_ptr<_Alnode>(_Al_) {
+			_Alloc_construct_ptr<_Alnode>::_Allocate();
+		}
+
+		_Tree_temp_node_alloc(const _Tree_temp_node_alloc&)            = delete;
+		_Tree_temp_node_alloc& operator=(const _Tree_temp_node_alloc&) = delete;
+	};
+
+	template <class _Alnode>
+	struct _Tree_temp_node : _Tree_temp_node_alloc<_Alnode> {
+		// temporarily stores a constructed tree node
+		using _Alnode_traits = allocator_traits<_Alnode>;
+		using _Nodeptr       = typename _Alnode_traits::pointer;
+
+		enum _Redbl { // colors for link to parent
+			_Red,
+			_Black
+		};
+	};
+
+	template <class _Value_type, class _Size_type, class _Difference_type, class _Pointer, class _Const_pointer,
+		class _Nodeptr_type>
+	struct _Tree_iter_types {
+		using value_type      = _Value_type;
+		using size_type       = _Size_type;
+		using difference_type = _Difference_type;
+		using pointer         = _Pointer;
+		using const_pointer   = _Const_pointer;
+		using _Nodeptr        = _Nodeptr_type;
+	};
+
+	template <class _Mytree, class _Base = _Iterator_base0>
+	class _Tree_unchecked_const_iterator : public _Base {
+	public:
+		using iterator_category = bidirectional_iterator_tag;
+
+		using _Nodeptr        = typename _Mytree::_Nodeptr;
+		using value_type      = typename _Mytree::value_type;
+		using difference_type = typename _Mytree::difference_type;
+		using pointer         = typename _Mytree::const_pointer;
+		using reference       = const value_type&;
+
+		_Nodeptr _Ptr; // pointer to node
+	};
+
+	template <class _Mytree>
+	class _Tree_const_iterator : public _Tree_unchecked_const_iterator<_Mytree, _Iterator_base> {
+	public:
+		using _Mybase           = _Tree_unchecked_const_iterator<_Mytree, _Iterator_base>;
+		using iterator_category = bidirectional_iterator_tag;
+
+		using _Nodeptr        = typename _Mytree::_Nodeptr;
+		using value_type      = typename _Mytree::value_type;
+		using difference_type = typename _Mytree::difference_type;
+		using pointer         = typename _Mytree::const_pointer;
+		using reference       = const value_type&;
+
+		// using _Mybase::_Mybase;
+	};
+
+	template <class _Mytree>
+	class _Tree_iterator : public _Tree_const_iterator<_Mytree> {
+	public:
+		using _Mybase           = _Tree_const_iterator<_Mytree>;
+		using iterator_category = bidirectional_iterator_tag;
+
+		using _Nodeptr        = typename _Mytree::_Nodeptr;
+		using value_type      = typename _Mytree::value_type;
+		using difference_type = typename _Mytree::difference_type;
+
+		using pointer   = typename _Mytree::pointer;
+		using reference = value_type&;
+
+		// using _Mybase::_Mybase;
+
+		using _Prevent_inheriting_unwrap = _Tree_iterator;
+	};
+
+	template <class _Traits>
+	class _Tree { // ordered red-black tree for map/multimap/set/multiset
+	public:
+		using key_type       = typename _Traits::key_type;
+		using value_type     = typename _Traits::value_type;
+		using allocator_type = typename _Traits::allocator_type;
+
+	protected:
+		using _Alty          = std::allocator_traits<allocator_type>::template rebind_alloc<value_type>;
+		using _Alty_traits   = allocator_traits<_Alty>;
+		using _Node          = _Tree_node<value_type, typename _Alty_traits::void_pointer>;
+		using _Alnode        = std::allocator_traits<allocator_type>::template rebind_alloc<_Node>;
+		using _Alnode_traits = allocator_traits<_Alnode>;
+		using _Nodeptr       = typename _Alnode_traits::pointer;
+
+		using _Scary_val = _Tree_val<conditional_t<_Is_simple_alloc_v<_Alnode>, _Tree_simple_types<value_type>,
+			_Tree_iter_types<value_type, typename _Alty_traits::size_type, typename _Alty_traits::difference_type,
+				typename _Alty_traits::pointer, typename _Alty_traits::const_pointer, _Nodeptr>>>;
+
+		static constexpr bool _Multi  = _Traits::_Multi;
+		static constexpr bool _Is_set = is_same_v<key_type, value_type>;
+
+		enum _Redbl { // colors for link to parent
+			_Red,
+			_Black
+		};
+
+	public:
+		// using value_compare = typename _Traits::value_compare;
+
+		using key_compare = typename _Traits::key_compare;
+
+		using size_type       = typename _Alty_traits::size_type;
+		using difference_type = typename _Alty_traits::difference_type;
+		using pointer         = typename _Alty_traits::pointer;
+		using const_pointer   = typename _Alty_traits::const_pointer;
+		using reference       = value_type&;
+		using const_reference = const value_type&;
+
+		using iterator       = conditional_t<_Is_set, _Tree_const_iterator<_Scary_val>, _Tree_iterator<_Scary_val>>;
+		using const_iterator = _Tree_const_iterator<_Scary_val>;
+		// using _Unchecked_iterator =
+			// conditional_t<_Is_set, _Tree_unchecked_const_iterator<_Scary_val>, _Tree_unchecked_iterator<_Scary_val>>;
+		using _Unchecked_const_iterator = _Tree_unchecked_const_iterator<_Scary_val>;
+
+		// using reverse_iterator       = _STD reverse_iterator<iterator>;
+		// using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
+
+		enum class _Strategy : bool {
+			_Copy,
+			_Move,
+		};
+
+	private:
+		_Compressed_pair<key_compare, _Compressed_pair<_Alnode, _Scary_val>> _Mypair;
+	};
+}

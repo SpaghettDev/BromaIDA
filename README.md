@@ -14,7 +14,6 @@ Parses a Broma file and exports the bindings into a Broma file/imports the bindi
 - PyBroma
 - If you want to be able to import types:
   - IDAClang
-  - STL Headers (see [Importing Types Requirements](#importing-types-requirements))
 
 ## Features
 
@@ -46,32 +45,9 @@ Parses a Broma file and exports the bindings into a Broma file/imports the bindi
 
 - To import types:
   - You must have IDAClang.
-  - You must have the STL headers for the target platform (MSVC headers for Windows binary, GCC headers for the others). You can however use MSVC headers on binaries that aren't Windows (_but not the other way around_).
-  - Extras.bro **_must_** be in the same directory as the imported Broma file
+  - `Extras.bro` **_must_** be in the same directory as the imported Broma file
 
-- Get your STL Headers path (on Windows)
-  - For Windows binary (or if not using custom GNU STL)
-     1. Get MSVC Headers by installing MSVC using the [Visual Studio Installer](https://visualstudio.microsoft.com/downloads)
-     2. Your header path should be `C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\include`
-  - For Android binaries (Android 64 and 32 bit)
-     1. First get gcc-arm-none-linux-gnueabihf (i did so by using scoop; `scoop install extras/gcc-arm-none-linux-gnueabihf`)
-     2. Your header path should be `C:\Users\YOUR_NAME\scoop\apps\gcc-arm-none-linux-gnueabihf\current\arm-none-linux-gnueabihf\include\c++\13.3.1;` (be sure to replace YOUR_NAME with your windows username)
-  - For MacOS (Intel and M1 Mac) and iOS binaries
-     1. First get gcc (i did so by using scoop; `scoop install gcc`)
-     2. Your header path should be `C:\Users\YOUR_NAME\scoop\apps\gcc\current\include\c++\13.2.0` (be sure to replace YOUR_NAME with your windows username)
-
-1. Launch the BromaIDA plugin using Ctrl-Shift-B, or from the Top Bar (Edit -> Plugins -> BromaIDA)
-2. Click on the Settings button
-3. Follow the steps above to get and get your STL Headers path (be sure to check "Import Types")
-   - Once you get your STL Header path, paste it in the correct folder input. ("MSVC STL Directory" for MSVC, ...)
-   - If you **_aren't_** using custom GNU STL, be sure to **uncheck** "Use Custom [Android/Mac] GNU STL".
-   - If you **_are_** using custom GNU STL, be sure to **check** "Use Custom [Android/Mac] GNU STL", otherwise you won't be able to select the custom GNU STL path.
-4. Exit out of the settings window
-
-> [!NOTE]
-> If using MSVC STL Headers on non-Windows binaries, see [MSVC STL on Non-Windows](#msvc-stl-on-non-windows)
-
-Start the script and the plugin will handle everything :)
+You no longer need the STL headers for the given binary, as BromaIDA packages them for Android (android32, android64), Mach-O (imac, m1, ios) and Windows.
 
 ## BromaIDA Settings
 
@@ -79,16 +55,9 @@ Can be accessed through the main popup by clicking on the "Settings" button.
 This replaces the old "ask everything everytime" method.
 
 Here you will find some options you can set, such as importing types, settings default parser parameters, etc...
-The options you chose will be saved into a [shelf](https://docs.python.org/3/library/shelve.html) stored in the `IDA_DIRECTORY/plugins/broma_ida` folder.
+The options you chose will be saved into a [shelf](https://docs.python.org/3/library/shelve.html) stored in the `$HOME/broma_ida` folder.
 
 ![BromaIDA Settings](assets/settings.png)
-
-## MSVC STL on non-Windows
-
-If you are importing types using the MSVC STL on non-Windows binaries, you should:
-
-1. Disable "Set Default Parser Parameters" in Import Types Settings.
-2. Set the Windows preset for the parser. (Top Bar: Options -> Compiler -> Arguments -> Click on "Presets..." -> Choose "Windows").
 
 ## Utilities
 
