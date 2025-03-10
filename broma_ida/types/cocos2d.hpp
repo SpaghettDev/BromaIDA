@@ -2399,6 +2399,28 @@ namespace cocos2d
 	};
 
 	// @note RobTop Addition
+	class CCKeyboardHandler : public CCObject
+	{
+	public:
+		inline CCKeyboardHandler() = default;
+
+		virtual ~CCKeyboardHandler();
+
+		CCKeyboardHandler& operator=(const CCKeyboardHandler&);
+
+		CCKeyboardDelegate* getDelegate();
+
+		static CCKeyboardHandler* handlerWithDelegate(CCKeyboardDelegate* pDelegate);
+
+		virtual bool initWithDelegate(CCKeyboardDelegate* pDelegate);
+
+		void setDelegate(CCKeyboardDelegate* pDelegate);
+
+	public:
+		CCKeyboardDelegate* m_pDelegate;
+	};
+
+	// @note RobTop Addition
 	class CCMouseDelegate 
 	{
 	public:
@@ -5606,29 +5628,6 @@ namespace cocos2d
 
 
 	// @note RobTop Addition
-	class ObjectDecoderDelegate {
-	public:
-		virtual cocos2d::CCObject* getDecodedObject(int objectType, DS_Dictionary* data) { return nullptr; }
-	};
-
-	// @note RobTop Addition
-	class ObjectDecoder : public cocos2d::CCNode {
-	public:
-		ObjectDecoder();
-		~ObjectDecoder() {}
-
-		static ObjectDecoder* sharedDecoder();
-
-		cocos2d::CCObject* getDecodedObject(int, DS_Dictionary*);
-
-		virtual bool init();
-
-	public:
-		ObjectDecoderDelegate* m_delegate;
-	};
-
-
-	// @note RobTop Addition
 	class CCLightning : public CCNode, public CCRGBAProtocol {
 	public:
 		CCLightning();
@@ -6277,3 +6276,25 @@ namespace cocos2d
 		};
 	}
 }
+
+// @note RobTop Addition
+class ObjectDecoderDelegate {
+public:
+	virtual cocos2d::CCObject* getDecodedObject(int objectType, DS_Dictionary* data) { return nullptr; }
+};
+
+// @note RobTop Addition
+class ObjectDecoder : public cocos2d::CCNode {
+public:
+	ObjectDecoder();
+	~ObjectDecoder() {}
+
+	static ObjectDecoder* sharedDecoder();
+
+	cocos2d::CCObject* getDecodedObject(int, DS_Dictionary*);
+
+	virtual bool init();
+
+public:
+	ObjectDecoderDelegate* m_delegate;
+};

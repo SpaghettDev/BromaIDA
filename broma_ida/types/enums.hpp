@@ -350,7 +350,6 @@ enum class GJAreaActionType {};
 enum class GJSmartDirection {};
 enum class SmartBlockType {};
 enum class TouchTriggerControl {};
-enum class SmartPrefabResult {};
 enum class AudioSortType {};
 enum class spriteMode {};
 enum class GJAssetType {};
