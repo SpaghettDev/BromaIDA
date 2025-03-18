@@ -1,5 +1,5 @@
 # flake8-in-file-ignores: noqa: E402
-VERSION = "7.0.1"
+VERSION = "7.0.2"
 __AUTHOR__ = "SpaghettDev"
 
 PLUGIN_NAME = "BromaIDA"

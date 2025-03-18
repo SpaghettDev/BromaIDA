@@ -1,4 +1,5 @@
 from copy import deepcopy
+from collections import deque
 
 from idaapi import (
     get_imagebase, apply_tinfo,
@@ -399,7 +400,7 @@ class BromaImporter:
     _file_path: str
     _has_types: bool = False
 
-    bindings: list[Binding] = []
+    bindings: deque[Binding] = deque()
     duplicates: dict[int, list[Binding]] = {}
 
     def _codegen_classes(self, classes: dict[str, Class]) -> bool:
@@ -551,7 +552,7 @@ class BromaImporter:
                         ), 16
                     )
 
-                    if func_addr == -1 or func_addr == -2:
+                    if func_addr == -1:
                         continue
 
                     function = function_field.prototype
@@ -559,7 +560,7 @@ class BromaImporter:
                     # Runs only for the first time an address has a duplicate
                     if func_addr in self.bindings:
                         dup_binding = self.bindings[
-                            self.bindings.index(func_addr)
+                            self.bindings.index(func_addr)  # type: ignore
                         ]
                         error_location = \
                             f"{class_name}::{function.name} " \
@@ -621,7 +622,9 @@ class BromaImporter:
                 )
                 ida_addresses[demangled_name] = addr
 
-            for binding in self.bindings:
+            while self.bindings:
+                binding = self.bindings.pop()
+
                 ida_ea = ida_addresses.get(binding.qualified_name, -0x1)
 
                 if ida_ea == -0x1:
@@ -636,7 +639,9 @@ class BromaImporter:
             return
 
         # first, handle non-duplicates
-        for binding in self.bindings:
+        while self.bindings:
+            binding = self.bindings.pop()
+
             ida_ea: int = get_imagebase() + binding.address
             ida_name: str = get_ea_name(ida_ea)
             ida_func_flags: int = get_func_flags(ida_ea)

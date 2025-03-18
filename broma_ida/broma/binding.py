@@ -137,7 +137,7 @@ class Binding:
             return True
 
         for broma, other in zip(self.parameters, other_args):
-            if self.__west_rp_ify(broma.type.replace("*", "&")) != \
+            if self.__west_rp_ify(broma.type.replace("&", "*")) != \
                     self.__west_rp_ify(other.type).replace(" *", "*"):
                 return False
 
