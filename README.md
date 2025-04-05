@@ -31,7 +31,7 @@ Parses a Broma file and exports the bindings into a Broma file/imports the bindi
 
 ## Installation
 
-1. Get python, then `git clone https://github.com/CallocGD/PyBroma --recursive`, `cd PyBroma` then finally `python .\setup.py install` to install PyBroma (blame CallocGD for breaking `pip install https://github.com/CallocGD/PyBroma/archive/refs/heads/main.zip`)
+1. Get python, then `pip install https://github.com/Prevter/PyBroma/archive/refs/heads/main.zip`
 2. Download the release/zip file
 3. Copy `BromaIDA.py` and the `broma_ida` folder into `IDA_DIRECTORY/plugins`
 
@@ -73,5 +73,6 @@ In the `utils` folder, you can find some utilities that can help in contributing
 - Special thanks to:
   - The [IDAPython API](https://hex-rays.com/products/ida/support/idapython_docs): Used for everything.
   - [CallocGD](https://github.com/CallocGD)'s [PyBroma](https://github.com/CallocGD/PyBroma): Used to parse imported Broma files.
+  - [Prevter](https://github.com/Prevter): Updating PyBroma
   - @sleepyut: Issuing 3 trillion bug reports. Also for suggesting a bunch of features. (they also made BromaBJ)
   - [AngelDev06](https://github.com/AngelDev06): Contributing features.
