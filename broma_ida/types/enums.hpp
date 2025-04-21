@@ -1,4 +1,4 @@
-// taken from https://github.com/geode-sdk/bindings/blob/main/bindings/include/Geode/Enums.hpp
+// taken from https://github.com/geode-sdk/bindings/blob/main/bindings/include/Geode/Enums.hpp#36066d5fafa6f272b14237bb76feb119a248e3c2
 
 // thanks pie
 enum class SearchType {
@@ -170,28 +170,41 @@ enum class GJGameEvent {
 };
 
 enum class PulseEffectType {
+	Default = 0,
+	Hsv = 1,
+	Color = 2,
 };
+
 enum class TouchTriggerType {
+	Normal = 0,
+	ToggleOn = 1,
+	ToggleOff = 2,
 };
+
 enum class PlayerButton {
 	Jump = 1,
 	Left = 2,
 	Right = 3,
 };
+
 enum class GhostType {
 	Disabled = 0,
 	Enabled = 1
 };
+
 enum class TableViewCellEditingStyle {
 };
+
 enum class UserListType {
 	Friends = 0,
 	Blocked = 1,
 };
+
 enum class GJErrorCode {
 	NotFound = -1,
 	UpdateApp = 3
 };
+
 enum class AccountError {
 	EmailsDoNotMatch = -99,
 	AlreadyLinkedToDifferentSteamAccount = -13,
@@ -206,11 +219,17 @@ enum class AccountError {
 	AlreadyUsedEmail = -3,
 	AlreadyUsedUsername = -2
 };
+
 enum class GJSongError {
 	DownloadSongFailed = 1,
 	DownloadSFXFailed = 2
 };
-enum class GJSongType {}; //probs normal and ncs
+
+enum class GJSongType {
+	Music = -1,
+	NCS = 1,
+};
+
 enum class LikeItemType {
 	Unknown = 0,
 	Level = 1,
@@ -220,23 +239,42 @@ enum class LikeItemType {
 };
 
 enum class CommentError {
+	Failed = 0,
+	Banned = 1
 };
+
 enum class BackupAccountError {
 	BackupOrSyncFailed = -3,
 	LoginFailed = -2
 };
+
 enum class GJMusicAction {
 	DownloadOrUpdate = 2,
 	UpdateSFXLibrary = 4,
 	UpdateMusicLibrary = 6
 };
-enum class CellAction {};
-enum class GJActionCommand {};
+
+enum class CellAction {
+	Click = 1,
+	Delete = 2,
+	Up = 3,
+	Down = 4,
+	Swap = 5,
+	Edit = 6
+};
+
+enum class GJActionCommand {
+	Stop = 0,
+	Pause = 1,
+	Resume = 2
+};
+
 enum class DifficultyIconType {
 	ShortText = 0,
 	DefaultText = 1,
 	NoText = 2
 };
+
 enum class GauntletType {
 	Fire = 0,
 	Ice = 2,
@@ -289,17 +327,28 @@ enum class GauntletType {
 	Discord = 0x31,
 	Split = 0x32
 };
-enum class GJMPErrorCode {};
+
+enum class GJMPErrorCode {
+	Failed = 0
+};
+
 enum class GJTimedLevelType {
 	Daily = 0,
 	Weekly = 1,
 	Event = 2
 };
+
 enum class SongSelectType {
 	Default = 0,
 	Custom = 1
 };
-enum class AudioTargetType {};
+
+enum class AudioTargetType {
+	SFXChannel = 0,
+	SFXGroup = 1,
+	MusicChannel = 2
+};
+
 enum class FMODReverbPreset {
 	Generic = 0,
 	PaddedCell = 1,
@@ -325,6 +374,7 @@ enum class FMODReverbPreset {
 	SewerPipe = 0x15,
 	Underwater = 0x16
 };
+
 enum class DemonDifficultyType {
 	HardDemon = 0,
 	EasyDemon = 3,
@@ -332,49 +382,149 @@ enum class DemonDifficultyType {
 	InsaneDemon = 5,
 	ExtremeDemon = 6
 };
+
 enum class PlayerCollisionDirection {
 	Top = 0,
 	Bottom = 1,
 	Left = 2,
 	Right = 3
 };
+
 enum class ChestSpriteState {
 	Locked = 1,
 	Closed = 2,
 	Opening = 3,
 	Opened = 4
 };
-enum class FormatterType {};
-enum class AudioModType {};
-enum class GJAreaActionType {};
-enum class GJSmartDirection {};
-enum class SmartBlockType {};
-enum class TouchTriggerControl {};
-enum class AudioSortType {};
-enum class spriteMode {};
-enum class GJAssetType {};
+
+enum class FormatterType {
+    Integer = 0,
+    Float = 1
+};
+
+enum class AudioModType {
+    Speed = 0,
+    Volume = 1
+};
+
+enum class GJAreaActionType {
+    Move = 0,
+    Rotate = 1,
+    Scale = 2,
+    Fade = 3,
+    Tint = 4
+};
+
+enum class GJSmartDirection {
+    Top = 1,
+    Bottom = 2,
+    Left = 3,
+    Right = 4,
+    TopLeft = 5,
+    TopRight = 6,
+    BottomLeft = 7,
+    BottomRight = 8
+};
+
+enum class SmartBlockType {
+    Block = 0x31,
+    NormalSlope1 = 0x32,
+    NormalSlope2 = 0x33,
+    NormalSlope3 = 0x34,
+    NormalSlope4 = 0x35,
+    WideSlope1 = 0x36,
+    WideSlope2 = 0x37,
+    WideSlope3 = 0x38,
+    WideSlope4 = 0x39,
+    WideSlope5 = 0x41,
+    WideSlope6 = 0x42,
+    WideSlope7 = 0x43,
+    WideSlope8 = 0x44,
+    WideSlope9 = 0x45,
+    WideSlope10 = 0x46,
+    WideSlope11 = 0x47,
+    WideSlope12 = 0x48,
+    WideSlope13 = 0x49,
+    WideSlope14 = 0x4A,
+    WideSlope15 = 0x4B,
+    WideSlope16 = 0x4C
+};
+
+enum class TouchTriggerControl {
+    Both = 0,
+    Player1 = 1,
+    Player2 = 2
+};
+
+enum class AudioSortType {
+    NameAscending = 0,
+    NameDescending = 1,
+    LengthAscending = 2,
+    LengthDescending = 3,
+    IDAscending = 4,
+    IDDescending = 5,
+    SongOrder = 6
+};
+
+enum class spriteMode {
+    FrameByFrame = 1,
+    PartAnim = 2
+};
+
+enum class GJAssetType {
+    Song = 1,
+    SFX = 2
+};
+
 enum class CommentKeyType {
 	Level = 0,
 	User = 1,
 	LevelList = 2
 };
+
 enum class LevelLeaderboardMode {
 	Time = 0,
 	Points = 1
 };
-enum class StatKey {};
+
+enum class StatKey {
+    FirePath = 30,
+    IcePath = 31,
+    PoisonPath = 32,
+    ShadowPath = 33,
+    LavaPath = 34,
+    EarthPath = 35,
+    BloodPath = 36,
+    MetalPath = 37,
+    LightPath = 38,
+    SoulPath = 39
+};
+
 enum class TextStyleType {
 	Colored = 1,
 	Instant = 2,
 	Shake = 3,
 	Delayed = 4
 };
-enum class InputValueType {};
-enum class GJInputStyle {};
+
+enum class InputValueType {
+    Float = 1,
+    Int = 2,
+    Uint = 3,
+};
+
+enum class GJInputStyle {
+    // Golden label
+    GoldLabel = 0,
+    // chatFont label
+    ChatLabel = 1,
+};
+
 enum class GJDifficultyName {
 	Short = 0,
 	Long = 1
 };
+
 enum class GJFeatureState {
 	None = 0,
 	Featured = 1,
@@ -382,9 +532,16 @@ enum class GJFeatureState {
 	Legendary = 3,
 	Mythic = 4
 };
+
 enum class GJKeyGroup {};
 enum class GJKeyCommand {};
-enum class SelectSettingType {};
+
+enum class SelectSettingType {
+	StartingModeClassic = 0,
+	StartingModePlatformer = 1,
+	StartingSpeed = 2,
+};
+
 enum class gjParticleValue {
 	MaxParticles = 1,
 	Duration = 2,
@@ -446,17 +603,30 @@ enum class gjParticleValue {
 	FrictionR = 0x47,
 	PlusMinus26 = 0x48
 };
-enum class ColorSelectType {};
-enum class AudioGuidelinesType {
-	GuidelineCreator = 0,
-	BPMFinder = 1
+
+enum class ColorSelectType {
+    Pulse = 0,
+    Color = 1,
+    Filter = 2
 };
+
+enum class AudioGuidelinesType {
+    GuidelineCreator = 0,
+    BPMFinder = 1
+};
+
 enum class SmartBrowseFilter {};
-enum class GJUITouchEvent {};
+
+enum class GJUITouchEvent {
+    Pressed = 0,
+    Moved = 1,
+    Ended = 2
+};
+
 enum class ObjectScaleType {
-	XY = 0,
-	X = 1,
-	Y = 2
+    XY = 0,
+    X = 1,
+    Y = 2
 };
 
 enum class CommentType {
@@ -776,12 +946,15 @@ enum class GJHttpType {
 	GetTopArtists = 0x35,
 	GetAccountBackupURL = 0x36,
 	GetAccountSyncURL = 0x37,
-
-	// Yet to be added by Robtop in 2.21
-	// joinLobby = 0x39,
-	// ExitMPLobby = 0x3a,
-
-	DeleteServerLevelList = 0x3e,
+	//0x38 is unused? 
+	JoinLobby = 0x39,
+	ExitLobby = 0x3A,
+	GetCustomContentURL = 0x3B,
+	GetLevelLists = 0x3C,
+	UploadLevelList = 0x3D,
+	DeleteServerLevelList = 0x3E,
+	GetNews = 0x3F,
+	GetGJSecretReward = 0x40
 };
 
 enum class DialogChatPlacement {
@@ -796,6 +969,7 @@ enum class DialogAnimationType {
 	FromLeft = 2,
 	FromRight = 3,
 	FromTop = 4,
+	FromTop2 = 5,
 	// a 5th type is defined which acts exactly the same as FromTop
 };
 
@@ -812,6 +986,11 @@ enum class ShipStreak {
 	ShipFire4 = 4,
 	ShipFire5 = 5,
 	ShipFire6 = 6,
+};
+
+enum class TextFadeInStyle {
+	Fade = 0,
+	Scale = 1
 };
 
 
@@ -834,6 +1013,23 @@ enum class PlaybackMode {
 	Not = 0,
 	Playing = 1,
 	Paused = 2,
+};
+
+enum class GJColorIndex {
+	BG = 1000,
+	G1 = 1001,
+	L = 1002,
+	TDL = 1003,
+	Obj = 1004,
+	P1 = 1005,
+	P2 = 1006,
+	LBG = 1007,
+	G2 = 1009,
+	Black = 1010,
+	White = 1011,
+	Lighter = 1012,
+	MG = 1013,
+	MG2 = 1014
 };
 
 enum class ComparisonType {
@@ -866,6 +1062,14 @@ enum class GameOptionsSetting {
 	Off = -1,
 	Disabled = 0,
 	On = 1,
+};
+
+enum class GameObjectClassType {
+	Game = 0,
+	Effect = 1,
+	Animated = 2,
+	Enhanced = 4,
+	Smart = 5,
 };
 
 // Wylie Addition (https://github.com/Wyliemaster/GD-Decompiled/blob/main/GD/code/headers/Layers/LevelSettingsLayer.h)
