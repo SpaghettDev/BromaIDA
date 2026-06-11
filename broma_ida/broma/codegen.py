@@ -67,7 +67,9 @@ class BromaCodegen:
                 })
             )
 
-            self._copy_content(f, "enums.hpp")
+            enums = (self._broma_path / "../include/Geode/Enums.hpp").resolve().as_posix()
+            f.write(f'// Enums (dynamically included from "{enums}")\n')
+            self._copy_content(f, enums, "enums_only", True)
             self._copy_content(f, "cocos2d.hpp", "parse")
             self._copy_content(f, "fmod.hpp")
             self._copy_content(f, "fmod_gd.hpp")
@@ -151,7 +153,9 @@ class BromaCodegen:
 
     def _copy_content(
             self, file: TextIOWrapper, fname: str,
-            incl_mode: Literal["parse", "filter", ""] = ""
+            incl_mode: Literal["parse", "filter", "enums_only", ""] = "",
+            no_header_comment: bool = False
+
     ) -> None:
         """Quick writes a file to another file
 
@@ -159,14 +163,20 @@ class BromaCodegen:
             file (TextIOWrapper): File to write to
             fname (str): Filename to copy from
             incl_mode (Literal["parse", "filter", ""]):
-                Whether to parse, filter, or do nothing to relative includes
+                Whether to parse includes, filter includes,
+                only keep enum declarations, or do nothing
 
         """
-        with open(self._path / fname) as fr:
-            file.write(f"// {fname}\n")
+        # detect if we have already passed an absolute path for the file
+        src_path = Path(fname) if Path(fname).is_absolute() else (self._path / fname)
+
+        with open(src_path) as fr:
+            if not no_header_comment:
+                file.write(f"// {fname}\n")
             file.writelines({
                 "filter": self._filter_relative_includes,
                 "parse": self._parse_relative_includes,
+                "enums_only": self._parse_enums_only,
                 "": lambda t: t
             }[incl_mode](fr.readlines()))
             file.write("\n\n")
@@ -219,3 +229,50 @@ class BromaCodegen:
                     lines[i+1:i+1] = [*fr.readlines(), "\n\n"]
 
         return lines
+    
+    def _parse_enums_only(self, lines: list[str]) -> list[str]:
+        """Extract only top-level enum declarations,
+        ignoring everything inside #if blocks.
+        This assumes the input is mostly sane
+        to avoid a lot of edge cases.
+
+        Args:
+            lines (list[str])
+
+        Returns:
+            list[str]"""
+        out: list[str] = []
+
+        pp_depth = 0
+        enum_depth = 0
+        in_enum = False
+
+        for line in lines:
+            stripped = line.lstrip()
+
+            # remove any #if/#ifdef/#ifndef blocks
+            if stripped.startswith(("#if", "#ifdef", "#ifndef")):
+                pp_depth += 1
+                continue
+
+            if stripped.startswith("#endif"):
+                pp_depth -= 1
+                continue
+
+            if pp_depth or stripped.startswith("#"):
+                continue
+
+            if not in_enum:
+                if not stripped.startswith("enum class "):
+                    continue
+                in_enum = True
+
+            out.append(line)
+
+            enum_depth += line.count("{")
+            enum_depth -= line.count("}")
+
+            if enum_depth == 0 and ";" in line:
+                in_enum = False
+
+        return out
